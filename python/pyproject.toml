@@ -3,13 +3,11 @@ name = "schedulease"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
+    "bs4>=0.0.2",
     "hjson>=3.1.0",
     "httpx>=0.28.1",
-    "jupyter>=1.1.1",
-    "lxml>=5.4.0",
-    "prompt-toolkit>=3.0.51",
-    "pycryptodome>=3.23.0",
-    "selenium>=4.33.0",
+    "lxml>=6.0.0",
+    "pathlib>=1.0.1",
 ]

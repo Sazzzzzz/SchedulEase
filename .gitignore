@@ -13,3 +13,4 @@ wheels/
 reference/
 test*.*
 .DS_Store
+data/
