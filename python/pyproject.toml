@@ -10,4 +10,5 @@ dependencies = [
     "httpx>=0.28.1",
     "lxml>=6.0.0",
     "pathlib>=1.0.1",
+    "pycryptodome>=3.23.0",
 ]
