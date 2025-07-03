@@ -1,9 +1,10 @@
-from collections import OrderedDict
 import re
-from typing import NamedTuple
+from collections import OrderedDict
+from typing import Any, NamedTuple
 
-from bs4 import BeautifulSoup, Tag
+import hjson
 import httpx
+from bs4 import BeautifulSoup, Tag
 
 from config import load_config
 
@@ -25,8 +26,9 @@ class ConnectionError(ServiceError):
 class LoginError(ServiceError):
     """Raised for login-related errors."""
 
-class ProfileError(ServiceError):
-    """Raised for profile-related errors"""
+
+class ParseError(ServiceError):
+    """Raised for errors in parsing data from the service, likely due to changes in the API or HTML structure."""
 
 
 class Profile(NamedTuple):
@@ -134,6 +136,7 @@ class EamisService:
         for div in selection_divs:
             assert isinstance(div, Tag), "Expected a Tag object"
             try:
+                # TODO: Logic here seems complex, consider simplifying with regex or more specific selectors
                 title_element = div.find("h3")
                 assert title_element is not None, "Title element not found"
                 title = title_element.get_text(strip=True)
@@ -145,7 +148,9 @@ class EamisService:
                 profile_id = href.split("=")[-1] if "=" in href else None
                 assert profile_id is not None, "Profile ID not found in href"
             except (AttributeError, IndexError) as e:
-                raise ProfileError(f"Failed to parse course category: {e}") from e
+                raise ParseError(
+                    f"Failed to parse course category: {e}. Likely due to changes in the HTML structure."
+                ) from e
             course_categories.append(
                 Profile(
                     title=title,
@@ -155,6 +160,46 @@ class EamisService:
             )
 
         return course_elect_menu_response, course_categories
+
+    def get_course_info(self, profile: Profile) -> Any | dict[Any, Any]:
+        try:
+            course_info = self.client.get(
+                "https://eamis.nankai.edu.cn/eams/stdElectCourse!data.action",
+                params={"profileId": profile.id},
+                headers={
+                    "Referer": str(profile.url),
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            )
+        except Exception as e:
+            raise ConnectionError(f"Failed to fetch course info: {e}") from e
+        course_info_parsed = BeautifulSoup(course_info.content, "lxml")
+        try:
+            # TODO: Logic here seems complex, consider simplifying with regex or more specific selectors
+            info = (
+                course_info_parsed.find("body")
+                .find("p")  # type: ignore
+                .get_text(strip=True)  # type: ignore
+                .split("=", 1)[-1]
+                .strip()
+            )[:-1]
+        except (AttributeError, IndexError) as e:
+            raise ParseError(
+                f"Failed to parse course info: {e}. Likely due to changes in the API return structure."
+            ) from e
+        return hjson.loads(info)
+
+    def get_all_course_info(self) -> dict[str, Any]:
+        """Fetch all course information for the user."""
+        _, profiles = self.get_profiles()
+
+        all_course_info = {}
+        for profile in profiles:
+            course_info = self.get_course_info(profile)
+            all_course_info[profile.id] = course_info
+
+        return all_course_info
+
 
 if __name__ == "__main__":
     service = EamisService()
