@@ -1,9 +1,10 @@
-from pathlib import Path
-import tomllib
 import hashlib
+import tomllib
+from pathlib import Path
+from typing import Any
+
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
-
 
 DEFAULT_CONFIG_TEMPLATE = """# SchedulEase Configuration File
 
@@ -73,7 +74,7 @@ def create_config(account: str, password: str) -> None:
     print("Default configuration file created.")
 
 
-def load_config() -> dict[str, str]:
+def load_config() -> dict[str, Any]:
     if not CONFIG_PATH.exists():
         raise FileNotFoundError(
             f"Configuration file not found at {CONFIG_PATH}. Please create it first."
