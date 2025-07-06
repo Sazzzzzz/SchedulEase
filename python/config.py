@@ -8,11 +8,6 @@ from Crypto.Util.Padding import pad
 
 DEFAULT_CONFIG_TEMPLATE = """# SchedulEase Configuration File
 
-# --- Service Configuration ---
-# Base URL for the university's EAMIS portal.
-[service]
-eamis_url = "https://eamis.nankai.edu.cn"
-
 # --- Request Headers ---
 # These headers mimic a real browser.
 [headers]

@@ -1,18 +1,21 @@
 import re
 from collections import OrderedDict
+from datetime import datetime
 from typing import Any, NamedTuple
-
+from functools import cached_property
 import hjson
 import httpx
 from bs4 import BeautifulSoup, Tag
 
 from config import load_config
 
-config = load_config()
-
-LOGIN_API = httpx.URL("https://iam.nankai.edu.cn/api/v1/login?os=web")
-EAMIS_URL = httpx.URL(config["service"]["eamis_url"])
-INITIAL_URL = EAMIS_URL.join("/eams/homeExt.action")
+# API URLs
+LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")
+EAMIS_URL = httpx.URL("https://eamis.nankai.edu.cn")
+LOGIN_API = LOGIN_URL.join("/api/v1/login?os=web")
+SITE_URL = EAMIS_URL.join("/eams/homeExt.action")
+PROFILE_URL = EAMIS_URL.join("/eams/stdElectCourse.action")
+COURSE_INFO_URL = EAMIS_URL.join("/eams/stdElectCourse!data.action")
 
 
 class ServiceError(Exception):
@@ -37,14 +40,13 @@ class Profile(NamedTuple):
     id: str
 
 class EamisService:
-    # Known Errors:
-    # CODE_MAPPING = {
-    #     0: "Success",
-    #     40000: "Parameter error",
-    #     10110001: "Account or password incorrect",
-    # }
+    @staticmethod
+    def create_timestamp():
+        now = datetime.now()
+        timestamp = int(now.timestamp() * 1000)
+        return timestamp
 
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
         self.client = httpx.Client()
         self.base_url: str = config["service"]["eamis_url"]
         self.account: str = config["user"]["account"]
@@ -61,10 +63,25 @@ class EamisService:
             raise ConnectionError(f"Failed to connect to EAMIS service: {e}") from e
         self.client.headers["Sec-Fetch-Site"] = "same-origin"
 
-    def login(self) -> httpx.Response:
+    # These cached properties exist to ensure:
+    # 1. The login process is only executed once per instance.
+    # 2. The values will be available when accessed instead of manual invocation.
+    @cached_property
+    def postlogin_response(self) -> httpx.Response:
+        """Cached property to store the response after login."""
+        return self.login()
+
+    def login(self):
+        """Login to EAMIS service.
+        Known response codes:
+         CODE_MAPPING = {
+             0: "Success",
+             40000: "Parameter error",
+             10110001: "Account or password incorrect",
+        """
         # Redirect to site
         try:
-            prelogin_response = self.client.get(INITIAL_URL, follow_redirects=True)
+            prelogin_response = self.client.get(SITE_URL, follow_redirects=True)
             prelogin_response.raise_for_status()
         except Exception as e:
             raise ConnectionError(f"Failed to access EAMIS initial URL: {e}") from e
@@ -103,23 +120,28 @@ class EamisService:
         if code != 0:
             raise LoginError(f"Login failed with code {code}: {message}")
         try:
-            link = EAMIS_URL.join(content["data"]["next"]["link"])
+            link = LOGIN_URL.join(content["data"]["next"]["link"])
         except KeyError as e:
             raise ServiceError(
-                f"Missing 'next' link in response: {content}, likely due to a change in the API format."
+                f"Missing 'next' link in response: {content}, likely due to a change in the API format, or login for multiple times."
             ) from e
         return self.client.get(link, follow_redirects=True)
 
-    def get_profiles(self) -> tuple[httpx.Response, list[Profile]]:
+    @cached_property
+    def profiles(self) -> list[Profile]:
+        """Cached property to store course profiles after fetching them."""
+        return self.get_profiles()
+
+    def get_profiles(self) -> list[Profile]:
         """Fetch election categories available for the user."""
         try:
             course_elect_menu_response = self.client.get(
-                EAMIS_URL.join("/eams/stdElectCourse.action"),
+                PROFILE_URL,
                 headers={
-                    "Referer": str(self.login().url),
+                    "Referer": str(self.postlogin_response.url),
                     "X-Requested-With": "XMLHttpRequest",
                 },
-                params={"_": "1749625169272"},
+                params={"_": self.create_timestamp()},
                 follow_redirects=True,
             )
         except httpx.HTTPError as e:
@@ -129,6 +151,10 @@ class EamisService:
                 f"An unknown error occurred while fetching course election menu: {e}"
             ) from e
         soup = BeautifulSoup(course_elect_menu_response.content, "lxml")
+
+        # Check if the course election menu is available
+        if soup.find(string=re.compile(r"无法选课")):
+            raise ServiceError("Course election menu is currently not available.")
         # TODO: Add logic when course election menu is not available
         selection_divs = soup.find_all("div", id=re.compile(r"^electIndexNotice\d+$"))
 
@@ -136,7 +162,6 @@ class EamisService:
         for div in selection_divs:
             assert isinstance(div, Tag), "Expected a Tag object"
             try:
-                # TODO: Logic here seems complex, consider simplifying with regex or more specific selectors
                 title_element = div.find("h3")
                 assert title_element is not None, "Title element not found"
                 title = title_element.get_text(strip=True)
@@ -147,7 +172,8 @@ class EamisService:
                 assert isinstance(href, str), "href attribute not found in link element"
                 profile_id = href.split("=")[-1] if "=" in href else None
                 assert profile_id is not None, "Profile ID not found in href"
-            except (AttributeError, IndexError) as e:
+
+            except Exception as e:
                 raise ParseError(
                     f"Failed to parse course category: {e}. Likely due to changes in the HTML structure."
                 ) from e
@@ -159,12 +185,12 @@ class EamisService:
                 )
             )
 
-        return course_elect_menu_response, course_categories
+        return course_categories
 
     def get_course_info(self, profile: Profile) -> Any | dict[Any, Any]:
         try:
             course_info = self.client.get(
-                "https://eamis.nankai.edu.cn/eams/stdElectCourse!data.action",
+                COURSE_INFO_URL,
                 params={"profileId": profile.id},
                 headers={
                     "Referer": str(profile.url),
@@ -175,15 +201,18 @@ class EamisService:
             raise ConnectionError(f"Failed to fetch course info: {e}") from e
         course_info_parsed = BeautifulSoup(course_info.content, "lxml")
         try:
-            # TODO: Logic here seems complex, consider simplifying with regex or more specific selectors
-            info = (
-                course_info_parsed.find("body")
-                .find("p")  # type: ignore
-                .get_text(strip=True)  # type: ignore
-                .split("=", 1)[-1]
-                .strip()
-            )[:-1]
-        except (AttributeError, IndexError) as e:
+            # Previous logic used to parse the course info for future reference:
+            # info = (
+            #     course_info_parsed.find("body")
+            #     .find("p")  # type: ignore
+            #     .get_text(strip=True)  # type: ignore
+            #     .split("=", 1)[-1]
+            #     .strip()
+            # )[:-1]
+            paragraph = course_info_parsed.select_one("body > p")
+            assert paragraph is not None, "Paragraph element not found"
+            info = paragraph.get_text(strip=True).split("=", 1)[-1].strip()[:-1]
+        except Exception as e:
             raise ParseError(
                 f"Failed to parse course info: {e}. Likely due to changes in the API return structure."
             ) from e
@@ -191,16 +220,18 @@ class EamisService:
 
     def get_all_course_info(self) -> dict[str, Any]:
         """Fetch all course information for the user."""
-        _, profiles = self.get_profiles()
 
         all_course_info = {}
-        for profile in profiles:
+        for profile in self.profiles:
             course_info = self.get_course_info(profile)
             all_course_info[profile.id] = course_info
 
         return all_course_info
 
+    # TODO: Should I store values in self as the program progresses? for example dataframe?
+
 
 if __name__ == "__main__":
-    service = EamisService()
-    response = service.login()
+    config = load_config()
+    service = EamisService(config)
+    print(service.get_all_course_info())
