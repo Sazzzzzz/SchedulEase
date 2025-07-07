@@ -1,9 +1,10 @@
+import enum
 import re
 from collections import OrderedDict
 from datetime import datetime
 from functools import cached_property
-from typing import Any, Iterable, NamedTuple, cast
 from itertools import chain
+from typing import Any, Iterable, NamedTuple, Optional, cast
 
 import hjson
 import httpx
@@ -19,6 +20,7 @@ LOGIN_API = LOGIN_URL.join("/api/v1/login?os=web")
 SITE_URL = EAMIS_URL.join("/eams/homeExt.action")
 PROFILE_URL = EAMIS_URL.join("/eams/stdElectCourse.action")
 COURSE_INFO_URL = EAMIS_URL.join("/eams/stdElectCourse!data.action")
+ELECT_URL = EAMIS_URL.join("/eams/stdElectCourse!batchOperator.action")
 
 
 class ServiceError(Exception):
@@ -36,11 +38,21 @@ class LoginError(ServiceError):
 class ParseError(ServiceError):
     """Raised for errors in parsing data from the service, likely due to changes in the API or HTML structure."""
 
+class ElectError(ServiceError):
+    """Raised for errors during course election, such as failure to elect or cancel a course."""
 
 class Profile(NamedTuple):
     title: str
     url: httpx.URL
     id: str
+
+class Course(NamedTuple):
+    id: str
+    name: str
+    profileUrl: str
+    profileId: str
+    expLessionGroup: Optional[str]
+
 
 class EamisService:
     # "startWeek", "endWeek", "credits" can be added later if needed
@@ -62,6 +74,12 @@ class EamisService:
         "expLessonGroupNo",
     ]
 
+    class Operation(enum.Enum):
+        """Enum for course operations."""
+
+        ELECT = True
+        CANCEL = False
+
     @staticmethod
     def create_timestamp():
         now = datetime.now()
@@ -70,7 +88,6 @@ class EamisService:
 
     def __init__(self, config: dict[str, Any]) -> None:
         self.client = httpx.Client()
-        self.base_url: str = config["service"]["eamis_url"]
         self.account: str = config["user"]["account"]
         self.password: str = config["user"]["password"]
         self.encrypted_password: str = config["user"]["encrypted_password"]
@@ -79,7 +96,7 @@ class EamisService:
 
     def initial_connection(self) -> None:
         try:
-            response = self.client.get(self.base_url)
+            response = self.client.get(EAMIS_URL, follow_redirects=False)
             response.raise_for_status()
         except Exception as e:
             raise ConnectionError(f"Failed to connect to EAMIS service: {e}") from e
@@ -139,8 +156,19 @@ class EamisService:
             code, message = content["code"], content["message"]
         except KeyError as e:
             raise ServiceError(f"Unexpected response format: {content}") from e
-        if code != 0:
-            raise LoginError(f"Login failed with code {code}: {message}")
+        match code:
+            case 0:
+                pass
+            case 10110001:
+                raise LoginError(
+                    f"Login failed: {message}. Please check your account and password."
+                )
+            case 40000:
+                raise LoginError(
+                    f"Login failed: {message}. Parameter error, likely due to a change in the API format."
+                )
+            case _:
+                raise LoginError(f"Login failed with code {code}: {message}")
         try:
             link = LOGIN_URL.join(content["data"]["next"]["link"])
         except KeyError as e:
@@ -264,6 +292,7 @@ class EamisService:
         data = cast(list[dict[str, Any]], hjson.loads(raw_data))
         for course in data:
             course["profileId"] = profile.id
+            course["profileUrl"] = str(profile.url)
 
         return data
 
@@ -370,7 +399,59 @@ class EamisService:
         df = EamisService.expand_lesson_groups(df)
         return df
 
+    def elect_course(self, course: Course, operation: Operation) -> None:
+        """Elect or cancel a course."""
+        opt = str(operation.value).lower()
+        expGroup = course.expLessionGroup if course.expLessionGroup else "_"
+        try:
+            elect_response = self.client.post(
+                ELECT_URL,
+                headers={
+                    "Referer": course.profileUrl,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                data={
+                    "optype": opt,
+                    "operator0": f"{course.id}:{opt}:0",
+                    "lesson0": str(course.id),
+                    f"expLessonGroup_{course.id}": expGroup,
+                },
+                params={"profileId": course.profileId},
+            )
+        except Exception as e:
+            raise ConnectionError(f"Failed to elect course: {e}") from e
+
+        soup = BeautifulSoup(elect_response.content, "lxml")
+        if operation == EamisService.Operation.ELECT:
+            match text := soup.get_text():
+                case text if "选课成功" in text:
+                    return None
+                case text if "当前选课不开放" in text:
+                    raise ElectError("Course election is currently not open.")
+                case text if "已经选过" in text:
+                    raise ElectError(f"Course {course.name} is already elected.")
+                case text if "计划外名额已满" in text:
+                    raise ElectError(
+                        f"Course {course.name} is considered as extra and has no available spots."
+                    )
+                case _:
+                    raise ElectError(
+                        f"Failed to elect course {course.name}. Response: {text}"
+                    )
+        else:  # Cancel operation
+            match text := soup.get_text():
+                case text if "退课成功" in text:
+                    return None
+                case _:
+                    raise ElectError(
+                        f"Failed to cancel course {course.name}. Response: {text}"
+                    )
+
+    # TODO: Implement method for multiple course election
+    # This requires error supressing; retry logic and concurrency control
+
 
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
+    service.course_info
