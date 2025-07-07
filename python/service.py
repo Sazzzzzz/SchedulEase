@@ -1,10 +1,13 @@
 import re
 from collections import OrderedDict
 from datetime import datetime
-from typing import Any, NamedTuple
 from functools import cached_property
+from typing import Any, Iterable, NamedTuple, cast
+from itertools import chain
+
 import hjson
 import httpx
+import polars as pl
 from bs4 import BeautifulSoup, Tag
 
 from config import load_config
@@ -40,13 +43,32 @@ class Profile(NamedTuple):
     id: str
 
 class EamisService:
+    # "startWeek", "endWeek", "credits" can be added later if needed
+    COURSE_FIELDS = [
+        "id",
+        "name",
+        "code",
+        "profileId",
+        "teachers",
+        "campusName",
+        "arrangeInfo",
+        "expLessonGroups",
+    ]
+    SCHEDULE_FIELDS = [
+        "weekDay",
+        "startUnit",
+        "endUnit",
+        "rooms",
+        "expLessonGroupNo",
+    ]
+
     @staticmethod
     def create_timestamp():
         now = datetime.now()
         timestamp = int(now.timestamp() * 1000)
         return timestamp
 
-    def __init__(self, config) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         self.client = httpx.Client()
         self.base_url: str = config["service"]["eamis_url"]
         self.account: str = config["user"]["account"]
@@ -141,7 +163,7 @@ class EamisService:
                     "Referer": str(self.postlogin_response.url),
                     "X-Requested-With": "XMLHttpRequest",
                 },
-                params={"_": self.create_timestamp()},
+                params={"_": EamisService.create_timestamp()},
                 follow_redirects=True,
             )
         except httpx.HTTPError as e:
@@ -187,7 +209,7 @@ class EamisService:
 
         return course_categories
 
-    def get_course_info(self, profile: Profile) -> Any | dict[Any, Any]:
+    def get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
         try:
             course_info = self.client.get(
                 COURSE_INFO_URL,
@@ -216,22 +238,139 @@ class EamisService:
             raise ParseError(
                 f"Failed to parse course info: {e}. Likely due to changes in the API return structure."
             ) from e
-        return hjson.loads(info)
+        return EamisService.process_raw_data(info, profile)
 
-    def get_all_course_info(self) -> dict[str, Any]:
+    @cached_property
+    def course_info(self) -> pl.DataFrame:
+        """Cached property to store course information as a Polars DataFrame."""
+        return self.get_all_course_info()
+
+    def get_all_course_info(self) -> pl.DataFrame:
         """Fetch all course information for the user."""
 
-        all_course_info = {}
-        for profile in self.profiles:
-            course_info = self.get_course_info(profile)
-            all_course_info[profile.id] = course_info
+        all_course_info = chain.from_iterable(
+            self.get_course_data(profile) for profile in self.profiles
+        )
 
-        return all_course_info
+        df = EamisService.create_dataframe(all_course_info)
+        return df
 
-    # TODO: Should I store values in self as the program progresses? for example dataframe?
+    # The function is currently implemented with native Python
+    # TODO: Optimize this function using Polars for better performance
+
+    @staticmethod
+    def process_raw_data(raw_data: str, profile: Profile) -> list[dict[str, Any]]:
+        """Process raw course data from EAMIS service. Appends profile information to the data."""
+        data = cast(list[dict[str, Any]], hjson.loads(raw_data))
+        for course in data:
+            course["profileId"] = profile.id
+
+        return data
+
+    @staticmethod
+    def expand_lesson_groups(df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Expand courses with multiple lesson groups into separate rows.
+        Each row will represent one lesson group with its filtered arrangements.
+        """
+
+        # First, let's create a helper function to process each row
+        def process_row(row_data):
+            """Process a single row and return list of expanded rows"""
+            exp_lesson_groups = row_data["expLessonGroups"]
+            arrange_info = cast(list[dict], row_data["arrangeInfo"])
+
+            # If no lesson groups, create one row with None values
+            if not exp_lesson_groups:
+                return [
+                    {
+                        **{
+                            col: row_data[col]
+                            for col in row_data.keys()
+                            if col not in ["expLessonGroups", "arrangeInfo"]
+                        },
+                        "expLessonGroupNo": None,
+                        "expLessonGroup": None,
+                        "arrangeInfo": [
+                            {k: v for k, v in arr.items() if k != "expLessonGroupNo"}
+                            for arr in arrange_info
+                        ],
+                    }
+                ]
+
+            # Create one row for each lesson group
+            expanded_rows = []
+            for local_group_no, server_group_id in exp_lesson_groups.items():
+                # Filter arrangements for this specific lesson group
+                filtered_arrangements = [
+                    {k: v for k, v in arr.items() if k != "expLessonGroupNo"}
+                    for arr in arrange_info
+                    if arr.get("expLessonGroupNo") == local_group_no
+                ]
+
+                # Create new row
+                new_row = {
+                    **{
+                        col: row_data[col]
+                        for col in row_data.keys()
+                        if col not in ["expLessonGroups", "arrangeInfo"]
+                    },
+                    "expLessonGroupNo": local_group_no,
+                    "expLessonGroup": server_group_id,
+                    "arrangeInfo": filtered_arrangements,
+                }
+                expanded_rows.append(new_row)
+
+            return expanded_rows
+
+        # Convert DataFrame to list of dicts for processing
+        rows_data = df.to_dicts()
+
+        # Process each row and flatten the results
+        all_expanded_rows = []
+        for row in rows_data:
+            expanded = process_row(row)
+            all_expanded_rows.extend(expanded)
+
+        # Convert back to DataFrame
+        return pl.DataFrame(all_expanded_rows)
+
+    @staticmethod
+    def create_dataframe(data: Iterable[dict[str, Any]]) -> pl.DataFrame:
+        """Create a Polars DataFrame from the processed course data. Processes the data to keep only the fields of interest."""
+
+        df = pl.DataFrame(data)
+        # Preserve only the fields of interest and split teachers into list
+        df = df.select(EamisService.COURSE_FIELDS).with_columns(
+            pl.col("teachers").str.split(",").alias("teachers")
+        )
+
+        df = df.with_columns(
+            # process expLessonGroups into dict
+            pl.col("expLessonGroups").map_elements(
+                lambda exp_list: {
+                    item.get("indexNo"): item.get("id") for item in exp_list
+                },
+                return_dtype=pl.Object,
+            ),
+            # process arrangeInfo to keep only the fields of interest
+            pl.col("arrangeInfo").map_elements(
+                lambda arrange_list: [
+                    {
+                        field: item.get(field)
+                        for field in EamisService.SCHEDULE_FIELDS
+                        if field in item
+                    }
+                    for item in arrange_list
+                ],
+                return_dtype=pl.Object,
+            ),
+        )
+        # Expand lesson groups into separate rows
+        df = EamisService.expand_lesson_groups(df)
+        return df
 
 
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
-    print(service.get_all_course_info())
