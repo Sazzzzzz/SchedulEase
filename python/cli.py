@@ -1,19 +1,10 @@
-from typing import NamedTuple, Optional
+import re
+from typing import Any, Generator, NamedTuple, Optional
 
 import polars as pl
-from prompt_toolkit import PromptSession, prompt
+from prompt_toolkit import PromptSession
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.completion import Completer, Completion
-from prompt_toolkit.formatted_text import FormattedText
-from prompt_toolkit.styles import Style
-
-style = Style.from_dict(
-    {
-        "course": "#ff0066",
-        "code": "#00ff44",
-        "teacher": "#44ff00 italic",
-    }
-)
 
 
 class Course(NamedTuple):
@@ -23,18 +14,8 @@ class Course(NamedTuple):
     teachers: list[str]
     profileUrl: str
     profileId: str
-    expLessonGroup: Optional[str]
-    expLessonGroupNo: Optional[str]
-
-    @property
-    def display_string(self) -> FormattedText:
-        return FormattedText(
-            [
-                ("class:code", f" {self.code} "),
-                ("class:course", self.name),
-                ("class:teacher", " ".join(self.teachers)),
-            ]
-        )
+    expLessonGroup: Optional[int]
+    expLessonGroupNo: Optional[int]
 
     @property
     def search_string(self) -> str:
@@ -62,6 +43,48 @@ class Course(NamedTuple):
             expLessonGroupNo=row["expLessonGroupNo"],
         )
 
+    @property
+    def query_string(self) -> str:
+        """
+        Return a string representation of the course ID and group number.
+        """
+        return (
+            f"[{self.id}] {self.name}"
+            if self.expLessonGroupNo is None
+            else f"[{self.id}:{self.expLessonGroupNo}] {self.name}"
+        )
+
+    @staticmethod
+    def from_query_string(query: str, df: pl.DataFrame) -> "Course":
+        """
+        Create a Course instance from a query string.
+        The query string should be in the format "[id]" or "[id:groupNo]".
+        """
+        if m := re.match(r"\[(\d+):(\d+)\]", query):
+            course_id = int(m.group(1))
+            group_no = int(m.group(2))
+            row = df.filter(
+                (pl.col("id") == course_id) & (pl.col("expLessonGroupNo") == group_no)
+            ).to_dicts()
+        elif m := re.match(r"\[(\d+)\]", query):
+            course_id = int(m.group(1))
+            group_no = None
+            row = df.filter(
+                (pl.col("id") == course_id) & (pl.col("expLessonGroupNo").is_null())
+            ).to_dicts()
+        else:
+            raise ValueError(f"Invalid query string format: {query}")
+
+        if not row:
+            raise ValueError(
+                f"Course with id={course_id} and group_no={group_no} not found"
+            )
+        elif len(row) > 1:
+            raise ValueError(
+                f"Multiple courses found with id={course_id} and group_no={group_no}"
+            )
+        return Course.from_row(row[0])
+
 
 class CourseCompleter(Completer):
     """
@@ -72,21 +95,23 @@ class CourseCompleter(Completer):
         self.df = df
         self.candidates = [Course.from_row(row) for row in df.to_dicts()]
 
-    def get_completions(self, document, complete_event):
+    def get_completions(
+        self, document, complete_event
+    ) -> Generator[Completion, Any, None]:
         """
         Yields completions based on the user's input.
         """
         text_to_match = document.text_before_cursor
-
+        text_to_match = re.sub(r"\[\d+(?::\d+)?\]", " ", text_to_match).strip()
         if not text_to_match:
             return
 
         for course in self.candidates:
             if text_to_match in course.search_string:
                 yield Completion(
-                    text=course.name,
+                    text=course.query_string,
                     start_position=-len(document.text_before_cursor),
-                    display=course.display_string,  # How the suggestion is shown in the dropdown
+                    display=course.search_string,
                     display_meta=course.meta_string,
                 )
 
@@ -108,7 +133,8 @@ if __name__ == "__main__":
                 completer=course_completer,
                 complete_while_typing=True,
             )
-            print(f"\nYou selected: {selected_course}")
+            course = Course.from_query_string(selected_course, df)
+            print(f"\nYou selected: {course.search_string}")
 
     except KeyboardInterrupt:
         print("\nExiting.")
