@@ -4,13 +4,14 @@ from collections import OrderedDict
 from datetime import datetime
 from functools import cached_property
 from itertools import chain
-from typing import Any, Iterable, NamedTuple, Optional, cast
+from typing import Any, Iterable, NamedTuple, TypeAlias, cast
 
 import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
 
+from cli import Course
 from config import load_config
 
 # API URLs
@@ -46,12 +47,8 @@ class Profile(NamedTuple):
     url: httpx.URL
     id: str
 
-class Course(NamedTuple):
-    id: str
-    name: str
-    profileUrl: str
-    profileId: str
-    expLessionGroup: Optional[str]
+
+CourseInfo: TypeAlias = dict[str, Any]
 
 
 class EamisService:
@@ -61,6 +58,7 @@ class EamisService:
         "name",
         "code",
         "profileId",
+        "profileUrl",
         "teachers",
         "campusName",
         "arrangeInfo",
@@ -237,7 +235,7 @@ class EamisService:
 
         return course_categories
 
-    def get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
+    def get_course_data(self, profile: Profile) -> list[CourseInfo]:
         try:
             course_info = self.client.get(
                 COURSE_INFO_URL,
@@ -266,7 +264,8 @@ class EamisService:
             raise ParseError(
                 f"Failed to parse course info: {e}. Likely due to changes in the API return structure."
             ) from e
-        return EamisService.process_raw_data(info, profile)
+        raw_data = cast(list[CourseInfo], hjson.loads(info))
+        return EamisService.process_raw_data(raw_data, profile)
 
     @cached_property
     def course_info(self) -> pl.DataFrame:
@@ -287,9 +286,9 @@ class EamisService:
     # TODO: Optimize this function using Polars for better performance
 
     @staticmethod
-    def process_raw_data(raw_data: str, profile: Profile) -> list[dict[str, Any]]:
+    def process_raw_data(data: list[CourseInfo], profile: Profile) -> list[CourseInfo]:
         """Process raw course data from EAMIS service. Appends profile information to the data."""
-        data = cast(list[dict[str, Any]], hjson.loads(raw_data))
+
         for course in data:
             course["profileId"] = profile.id
             course["profileUrl"] = str(profile.url)
@@ -365,7 +364,7 @@ class EamisService:
         return pl.DataFrame(all_expanded_rows)
 
     @staticmethod
-    def create_dataframe(data: Iterable[dict[str, Any]]) -> pl.DataFrame:
+    def create_dataframe(data: Iterable[CourseInfo]) -> pl.DataFrame:
         """Create a Polars DataFrame from the processed course data. Processes the data to keep only the fields of interest."""
 
         df = pl.DataFrame(data)
@@ -402,7 +401,7 @@ class EamisService:
     def elect_course(self, course: Course, operation: Operation) -> None:
         """Elect or cancel a course."""
         opt = str(operation.value).lower()
-        expGroup = course.expLessionGroup if course.expLessionGroup else "_"
+        expGroup = course.expLessonGroup if course.expLessonGroup else "_"
         try:
             elect_response = self.client.post(
                 ELECT_URL,
@@ -454,4 +453,17 @@ class EamisService:
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
-    service.course_info
+    # service.course_info
+    # import json
+
+    # test_profile = Profile(
+    #     title="TestProfile",
+    #     url=httpx.URL("https://eamis.nankai.edu.cn/fake_profile"),
+    #     id="1234",
+    # )
+    # with open("test.json", "r", encoding="utf-8") as f:
+    #     data = json.load(f)
+    # df = EamisService.create_dataframe(
+    #     EamisService.process_raw_data(data, test_profile)
+    # )
+    # df.write_json("data/output.json")
