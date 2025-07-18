@@ -1,10 +1,16 @@
 import re
-from typing import Any, Generator, NamedTuple, Optional
+from typing import Any, Generator, Iterable, NamedTuple, Optional
 
 import polars as pl
 from prompt_toolkit import PromptSession
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.completion import Completer, Completion
+
+
+class Duration(NamedTuple):
+    weekday: int  # 1=Monday, 7=Sunday
+    start: int
+    end: int
 
 
 class Course(NamedTuple):
@@ -27,8 +33,19 @@ class Course(NamedTuple):
         """Return a string for displaying additional information."""
         return f"{self.id} {f'Group: {self.expLessonGroupNo}' if self.expLessonGroupNo else ''}"
 
+    @property
+    def query_string(self) -> str:
+        """
+        Return a string representation of the course ID and group number.
+        """
+        return (
+            f"[{self.id}] {self.name}"
+            if self.expLessonGroupNo is None
+            else f"[{self.id}:{self.expLessonGroupNo}] {self.name}"
+        )
+
     @staticmethod
-    def from_row(row: dict) -> "Course":
+    def from_row(row: dict[str, Any]) -> "Course":
         """
         Create a Course instance from a Polars DataFrame row.
         """
@@ -43,19 +60,16 @@ class Course(NamedTuple):
             expLessonGroupNo=row["expLessonGroupNo"],
         )
 
-    @property
-    def query_string(self) -> str:
-        """
-        Return a string representation of the course ID and group number.
-        """
-        return (
-            f"[{self.id}] {self.name}"
-            if self.expLessonGroupNo is None
-            else f"[{self.id}:{self.expLessonGroupNo}] {self.name}"
-        )
 
-    @staticmethod
-    def from_query_string(query: str, df: pl.DataFrame) -> "Course":
+class CourseManager:
+    """
+    A class to query and manage course data.
+    """
+
+    def __init__(self, df: pl.DataFrame):
+        self.df = df
+
+    def course_from_input(self, query: str) -> Course:
         """
         Create a Course instance from a query string.
         The query string should be in the format "[id]" or "[id:groupNo]".
@@ -63,13 +77,13 @@ class Course(NamedTuple):
         if m := re.match(r"\[(\d+):(\d+)\]", query):
             course_id = int(m.group(1))
             group_no = int(m.group(2))
-            row = df.filter(
+            row = self.df.filter(
                 (pl.col("id") == course_id) & (pl.col("expLessonGroupNo") == group_no)
             ).to_dicts()
         elif m := re.match(r"\[(\d+)\]", query):
             course_id = int(m.group(1))
             group_no = None
-            row = df.filter(
+            row = self.df.filter(
                 (pl.col("id") == course_id) & (pl.col("expLessonGroupNo").is_null())
             ).to_dicts()
         else:
@@ -84,6 +98,41 @@ class Course(NamedTuple):
                 f"Multiple courses found with id={course_id} and group_no={group_no}"
             )
         return Course.from_row(row[0])
+
+    def get_course_specifics(self, course: Course) -> dict[str, Any]:
+        """
+        Get specific details about a course from the DataFrame.
+        """
+        course_details = self.df.filter(
+            (pl.col("id") == course.id)
+            & (
+                pl.col("expLessonGroupNo") == course.expLessonGroupNo
+                if course.expLessonGroupNo is not None
+                else pl.col("expLessonGroupNo").is_null()
+            )
+        ).to_dicts()
+
+        if not course_details:
+            raise ValueError(f"Course with id={course.id} not found")
+
+        return course_details[0]
+
+    def get_course_duration(self, course: Course) -> Iterable[Duration]:
+        """
+        Get the duration of a course based on its schedule.
+        """
+        arrange_info = self.get_course_specifics(course).get("arrangeInfo", [])
+        if not arrange_info:
+            return []
+        return (
+            Duration(
+                weekday=arrangement["weekDay"],
+                start=arrangement["startUnit"],
+                end=arrangement["endUnit"],
+            )
+            for arrangement in arrange_info
+            if arrangement
+        )
 
 
 class CourseCompleter(Completer):
@@ -123,6 +172,7 @@ if __name__ == "__main__":
         # Load your DataFrame
         df = pl.read_json("data/output.json")
         course_completer = CourseCompleter(df)
+        course_manager = CourseManager(df)
 
         print("Search for a course by name or teacher. Press Tab for suggestions.")
         print("Select a course to see its ID. Press Ctrl+C to exit.")
@@ -133,8 +183,11 @@ if __name__ == "__main__":
                 completer=course_completer,
                 complete_while_typing=True,
             )
-            course = Course.from_query_string(selected_course, df)
+            course = course_manager.course_from_input(selected_course)
             print(f"\nYou selected: {course.search_string}")
+            print("Course Arrangements:")
+            for duration in course_manager.get_course_duration(course):
+                print(f"{duration.weekday} - {duration.start} to {duration.end}")
 
     except KeyboardInterrupt:
         print("\nExiting.")

@@ -13,4 +13,5 @@ dependencies = [
     "polars>=1.31.0",
     "prompt-toolkit>=3.0.51",
     "pycryptodome>=3.23.0",
+    "rich>=14.0.0",
 ]
