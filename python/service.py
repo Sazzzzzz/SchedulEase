@@ -11,7 +11,7 @@ import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
 
-from cli import Course
+from shared import Course
 from config import load_config
 
 # API URLs
@@ -111,10 +111,11 @@ class EamisService:
     def login(self):
         """Login to EAMIS service.
         Known response codes:
-         CODE_MAPPING = {
-             0: "Success",
-             40000: "Parameter error",
-             10110001: "Account or password incorrect",
+        CODE_MAPPING = {
+            0: "Success",
+            40000: "Parameter error",
+            10110001: "Account or password incorrect",
+        }
         """
         # Redirect to site
         try:
@@ -453,6 +454,7 @@ class EamisService:
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
+    service.get_profiles()
     # service.course_info
     # import json
 
