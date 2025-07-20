@@ -1,6 +1,6 @@
 import io
-import re
 import os
+import re
 from typing import Any, Generator
 
 import polars as pl
@@ -50,7 +50,7 @@ class Curriculum:
     """
 
     def __init__(self):
-        self.courses = []  # Changed from set to list
+        self.courses: list[Course] = []  # Changed from set to list
         self.conflicts: dict[
             str, set[str]
         ] = {}  # Use course IDs instead of Course objects

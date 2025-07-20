@@ -11,8 +11,8 @@ import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
 
-from shared import Course
 from config import load_config
+from shared import Course
 
 # API URLs
 LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")

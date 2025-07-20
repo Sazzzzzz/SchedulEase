@@ -76,3 +76,5 @@ def load_config() -> dict[str, Any]:
         )
     with open(CONFIG_PATH, "rb") as f:
         return tomllib.load(f)
+
+# TODO: Add test login function to verify credentials
