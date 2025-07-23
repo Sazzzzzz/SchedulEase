@@ -502,6 +502,7 @@ class EamisService:
     # TODO: Use contextlib.suppress for error handling
     # TODO: Add logging for better error tracking
 
+
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
