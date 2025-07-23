@@ -1,10 +1,26 @@
+"""
+Core service for interacting with the EAMIS backend.
+"""
+
 import enum
+import random
 import re
 from collections import OrderedDict
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from functools import cached_property
 from itertools import chain
-from typing import Any, Iterable, NamedTuple, TypeAlias, cast
+from time import sleep
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    NamedTuple,
+    ParamSpec,
+    TypeAlias,
+    TypeVar,
+    cast,
+)
 
 import hjson
 import httpx
@@ -71,6 +87,9 @@ class EamisService:
         "rooms",
         "expLessonGroupNo",
     ]
+
+    P = ParamSpec("P")
+    T = TypeVar("T")
 
     class Operation(enum.Enum):
         """Enum for course operations."""
@@ -399,9 +418,12 @@ class EamisService:
         df = EamisService.expand_lesson_groups(df)
         return df
 
-    def elect_course(self, course: Course, operation: Operation) -> None:
+    def elect_course(
+        self, course: Course, operation: Operation = Operation.ELECT
+    ) -> None:
         """Elect or cancel a course."""
         opt = str(operation.value).lower()
+        # FIXME: This might not be the correct way to handle expLessonGroup
         expGroup = course.expLessonGroup if course.expLessonGroup else "_"
         try:
             elect_response = self.client.post(
@@ -447,9 +469,38 @@ class EamisService:
                         f"Failed to cancel course {course.name}. Response: {text}"
                     )
 
-    # TODO: Implement method for multiple course election
-    # This requires error supressing; retry logic and concurrency control
+    def delay_task(
+        self, time: float, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> T:
+        sleep(time)
+        return func(*args, **kwargs)
 
+    def elect_courses(self, courses: list[Course], max_delay: float = 0) -> None:
+        # the usage of submit+future instead of map is to handle exceptions
+        # that may occur during the election process
+        with ThreadPoolExecutor(max_workers=len(courses)) as executor:
+            # max_workers setting here is pretty safe
+            # because I don't really expect any one to elect more than 10 courses at once...
+            results: tuple[Future, ...] = tuple(
+                executor.submit(
+                    self.delay_task,
+                    random.uniform(0, max_delay),
+                    self.elect_course,
+                    course,
+                    EamisService.Operation.ELECT,
+                )
+                for course in courses
+            )
+            for future in results:
+                try:
+                    future.result()
+                except ElectError as e:
+                    print(f"Error electing course: {e}")
+                except Exception as e:
+                    print(f"Unexpected error: {e}")
+
+    # TODO: Use contextlib.suppress for error handling
+    # TODO: Add logging for better error tracking
 
 if __name__ == "__main__":
     config = load_config()
