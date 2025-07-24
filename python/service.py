@@ -68,6 +68,7 @@ CourseInfo: TypeAlias = dict[str, Any]
 
 
 class EamisService:
+    # ---- Utilities ----
     # "startWeek", "endWeek", "credits" can be added later if needed
     COURSE_FIELDS = [
         "id",
@@ -97,21 +98,19 @@ class EamisService:
         ELECT = True
         CANCEL = False
 
-    @staticmethod
-    def create_timestamp():
-        now = datetime.now()
-        timestamp = int(now.timestamp() * 1000)
-        return timestamp
-
     def __init__(self, config: dict[str, Any]) -> None:
         self.client = httpx.Client()
         self.account: str = config["user"]["account"]
-        self.password: str = config["user"]["password"]
         self.encrypted_password: str = config["user"]["encrypted_password"]
 
         self.client.headers.update(OrderedDict(config["headers"]))
 
     def initial_connection(self) -> None:
+        """
+        Test the initial connection to the EAMIS service. Raises `ConnectionError` if the connection fails.
+
+        This is a single method that must be invoked manually to ensure the service is reachable.
+        """
         try:
             response = self.client.get(EAMIS_URL, follow_redirects=False)
             response.raise_for_status()
@@ -119,9 +118,12 @@ class EamisService:
             raise ConnectionError(f"Failed to connect to EAMIS service: {e}") from e
         self.client.headers["Sec-Fetch-Site"] = "same-origin"
 
+    # ---- Cached Properties ----
     # These cached properties exist to ensure:
     # 1. The login process is only executed once per instance.
     # 2. The values will be available when accessed instead of manual invocation.
+
+    #
     @cached_property
     def postlogin_response(self) -> httpx.Response:
         """Cached property to store the response after login."""
@@ -129,6 +131,7 @@ class EamisService:
 
     def login(self):
         """Login to EAMIS service.
+
         Known response codes:
         CODE_MAPPING = {
             0: "Success",
@@ -197,11 +200,15 @@ class EamisService:
 
     @cached_property
     def profiles(self) -> list[Profile]:
-        """Cached property to store course profiles after fetching them."""
+        """
+        Cached property to store course profiles after fetching them.
+
+        This invokes login method.
+        """
         return self.get_profiles()
 
     def get_profiles(self) -> list[Profile]:
-        """Fetch election categories available for the user."""
+        """Fetch all election categories available for the user."""
         try:
             course_elect_menu_response = self.client.get(
                 PROFILE_URL,
@@ -256,6 +263,9 @@ class EamisService:
         return course_categories
 
     def get_course_data(self, profile: Profile) -> list[CourseInfo]:
+        """
+        Fetch course data for a specific profile.
+        """
         try:
             course_info = self.client.get(
                 COURSE_INFO_URL,
@@ -289,7 +299,11 @@ class EamisService:
 
     @cached_property
     def course_info(self) -> pl.DataFrame:
-        """Cached property to store course information as a Polars DataFrame."""
+        """
+        Cached property to store course information as a Polars DataFrame.
+
+        This invokes profile method and in turn invokes login.
+        """
         return self.get_all_course_info()
 
     def get_all_course_info(self) -> pl.DataFrame:
@@ -302,9 +316,92 @@ class EamisService:
         df = EamisService.create_dataframe(all_course_info)
         return df
 
-    # The function is currently implemented with native Python
-    # TODO: Optimize this function using Polars for better performance
+    # ---- Course Election ----
+    def elect_course(
+        self, course: Course, operation: Operation = Operation.ELECT
+    ) -> None:
+        """
+        Elect or cancel a specific course.
 
+        This is not dependent on `profile` and `course_info` properties. Relies only on `self.client`.
+        """
+        opt = str(operation.value).lower()
+        # FIXME: This might not be the correct way to handle expLessonGroup
+        expGroup = course.expLessonGroup if course.expLessonGroup else "_"
+        try:
+            elect_response = self.client.post(
+                ELECT_URL,
+                headers={
+                    "Referer": course.profileUrl,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                data={
+                    "optype": opt,
+                    "operator0": f"{course.id}:{opt}:0",
+                    "lesson0": str(course.id),
+                    f"expLessonGroup_{course.id}": expGroup,
+                },
+                params={"profileId": course.profileId},
+            )
+        except Exception as e:
+            raise ConnectionError(f"Failed to elect course: {e}") from e
+
+        soup = BeautifulSoup(elect_response.content, "lxml")
+        if operation == EamisService.Operation.ELECT:
+            match text := soup.get_text():
+                case text if "选课成功" in text:
+                    return None
+                case text if "当前选课不开放" in text:
+                    raise ElectError("Course election is currently not open.")
+                case text if "已经选过" in text:
+                    raise ElectError(f"Course {course.name} is already elected.")
+                case text if "计划外名额已满" in text:
+                    raise ElectError(
+                        f"Course {course.name} is considered as extra and has no available spots."
+                    )
+                case _:
+                    raise ElectError(
+                        f"Failed to elect course {course.name}. Response: {text}"
+                    )
+        else:  # Cancel operation
+            match text := soup.get_text():
+                case text if "退课成功" in text:
+                    return None
+                case _:
+                    raise ElectError(
+                        f"Failed to cancel course {course.name}. Response: {text}"
+                    )
+
+    # TODO: Use contextlib.suppress for error handling
+    # TODO: Add logging for better error tracking
+    def elect_courses(self, courses: list[Course], max_delay: float = 0) -> None:
+        """
+        Elect multiple courses with optional delay.
+        """
+        # the usage of submit+future instead of map is to handle exceptions
+        # that may occur during the election process
+        with ThreadPoolExecutor(max_workers=len(courses)) as executor:
+            # max_workers setting here is pretty safe
+            # because I don't really expect any one to elect more than 10 courses at once...
+            results: tuple[Future, ...] = tuple(
+                executor.submit(
+                    self.delay_task,
+                    random.uniform(0, max_delay),
+                    self.elect_course,
+                    course,
+                    EamisService.Operation.ELECT,
+                )
+                for course in courses
+            )
+            for future in results:
+                try:
+                    future.result()
+                except ElectError as e:
+                    print(f"Error electing course: {e}")
+                except Exception as e:
+                    print(f"Unexpected error: {e}")
+
+    # ---- Course Information Processing ----
     @staticmethod
     def process_raw_data(data: list[CourseInfo], profile: Profile) -> list[CourseInfo]:
         """Process raw course data from EAMIS service. Appends profile information to the data."""
@@ -315,6 +412,8 @@ class EamisService:
 
         return data
 
+    # The function is currently implemented with native Python
+    # TODO: Optimize this function using Polars for better performance
     @staticmethod
     def expand_lesson_groups(df: pl.DataFrame) -> pl.DataFrame:
         """
@@ -418,89 +517,24 @@ class EamisService:
         df = EamisService.expand_lesson_groups(df)
         return df
 
-    def elect_course(
-        self, course: Course, operation: Operation = Operation.ELECT
-    ) -> None:
-        """Elect or cancel a course."""
-        opt = str(operation.value).lower()
-        # FIXME: This might not be the correct way to handle expLessonGroup
-        expGroup = course.expLessonGroup if course.expLessonGroup else "_"
-        try:
-            elect_response = self.client.post(
-                ELECT_URL,
-                headers={
-                    "Referer": course.profileUrl,
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                data={
-                    "optype": opt,
-                    "operator0": f"{course.id}:{opt}:0",
-                    "lesson0": str(course.id),
-                    f"expLessonGroup_{course.id}": expGroup,
-                },
-                params={"profileId": course.profileId},
-            )
-        except Exception as e:
-            raise ConnectionError(f"Failed to elect course: {e}") from e
-
-        soup = BeautifulSoup(elect_response.content, "lxml")
-        if operation == EamisService.Operation.ELECT:
-            match text := soup.get_text():
-                case text if "选课成功" in text:
-                    return None
-                case text if "当前选课不开放" in text:
-                    raise ElectError("Course election is currently not open.")
-                case text if "已经选过" in text:
-                    raise ElectError(f"Course {course.name} is already elected.")
-                case text if "计划外名额已满" in text:
-                    raise ElectError(
-                        f"Course {course.name} is considered as extra and has no available spots."
-                    )
-                case _:
-                    raise ElectError(
-                        f"Failed to elect course {course.name}. Response: {text}"
-                    )
-        else:  # Cancel operation
-            match text := soup.get_text():
-                case text if "退课成功" in text:
-                    return None
-                case _:
-                    raise ElectError(
-                        f"Failed to cancel course {course.name}. Response: {text}"
-                    )
-
+    # ---- Helper Functions ----
     def delay_task(
         self, time: float, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
     ) -> T:
+        """
+        Helper function to delay the execution of a task.
+        """
         sleep(time)
         return func(*args, **kwargs)
 
-    def elect_courses(self, courses: list[Course], max_delay: float = 0) -> None:
-        # the usage of submit+future instead of map is to handle exceptions
-        # that may occur during the election process
-        with ThreadPoolExecutor(max_workers=len(courses)) as executor:
-            # max_workers setting here is pretty safe
-            # because I don't really expect any one to elect more than 10 courses at once...
-            results: tuple[Future, ...] = tuple(
-                executor.submit(
-                    self.delay_task,
-                    random.uniform(0, max_delay),
-                    self.elect_course,
-                    course,
-                    EamisService.Operation.ELECT,
-                )
-                for course in courses
-            )
-            for future in results:
-                try:
-                    future.result()
-                except ElectError as e:
-                    print(f"Error electing course: {e}")
-                except Exception as e:
-                    print(f"Unexpected error: {e}")
-
-    # TODO: Use contextlib.suppress for error handling
-    # TODO: Add logging for better error tracking
+    @staticmethod
+    def create_timestamp():
+        """
+        Helper function to create a timestamp in milliseconds.
+        """
+        now = datetime.now()
+        timestamp = int(now.timestamp() * 1000)
+        return timestamp
 
 
 if __name__ == "__main__":
