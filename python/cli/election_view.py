@@ -12,16 +12,19 @@ from rich.console import Console
 from rich.table import Table
 
 from python.shared import Course, Weekdays
-
+from python.service import EamisService
+# TODO: fix the bug related to string Course id
 
 class CourseCompleter(Completer):
     """
     A custom completer for courses that fuzzy searches course names and teacher names.
     """
 
-    def __init__(self, df: pl.DataFrame):
-        self.df = df
-        self.candidates = [Course.from_row(row) for row in df.to_dicts()]
+    def __init__(self, service: EamisService):
+        self.service = service
+        self.candidates = [
+            Course.from_row(row, service) for row in service.course_info.to_dicts()
+        ]
 
     def get_completions(
         self, document, complete_event
@@ -46,17 +49,18 @@ class CourseCompleter(Completer):
 
 class Curriculum:
     """
-    A class responsible for storing elected course and conflict analysis.
+    A container class responsible for storing elected course and conflict analysis.
     """
 
+    # TODO: support deleting course
     def __init__(self):
-        self.courses: list[Course] = []  # Changed from set to list
+        self.courses: list[Course] = []
         self.conflicts: dict[
             str, set[str]
         ] = {}  # Use course IDs instead of Course objects
 
     def add_course(self, course: Course):
-        # Check if course is already in curriculum
+        # Conflict Test
         for existing_course in self.courses:
             if existing_course.id == course.id:
                 return False  # Course already exists
@@ -74,11 +78,12 @@ class ElectionView:
     while the lower part is reserved for user input with prompted hints.
     """
 
-    def __init__(self):
+    def __init__(self, service: EamisService):
         self.io = io.StringIO()
         self.console = Console(file=self.io, force_terminal=True, width=100)
         self.session = PromptSession()
         self.curriculum = Curriculum()
+        self.service = service
 
     def clear_screen(self):
         """Clear the terminal screen."""
@@ -218,10 +223,9 @@ class ElectionView:
 
         return output
 
-    def run(self, df: pl.DataFrame):
+    def run(self):
         """Main application loop."""
-        Course.df = df
-        course_completer = CourseCompleter(df)
+        course_completer = CourseCompleter(self.service)
 
         try:
             while True:
@@ -269,7 +273,7 @@ class ElectionView:
 
                 # Try to parse as course selection
                 try:
-                    course = Course.from_input(user_input)
+                    course = Course.from_input(user_input, self.service)
                     if course:
                         if self.add_course(course):
                             print(
@@ -301,12 +305,12 @@ class ElectionView:
 
 # --- Main Application Logic ---
 if __name__ == "__main__":
-    try:
-        # Load your DataFrame
-        df = pl.read_json("data/output.json")
+    from python.tests.dummy_service import DummyEamisService
 
-        # Create and run the election view
-        election_view = ElectionView()
+    try:
+        # Create and run the election view with the dummy service
+        service = DummyEamisService()
+        election_view = ElectionView(service)
 
         print(
             HTML("<b><ansicyan>Welcome to SchedulEase Course Selection!</ansicyan></b>")
@@ -314,12 +318,12 @@ if __name__ == "__main__":
         print("Loading course data...")
         input("Press Enter to start...")
 
-        election_view.run(df)
+        election_view.run()
 
     except FileNotFoundError:
         print(
             HTML(
-                "<ansired>Error: Could not find 'data/output.json'. Please ensure the file exists.</ansired>"
+                "<ansired>Error: Could not find 'python/data/output.json'. Please ensure the file exists.</ansired>"
             )
         )
     except Exception as e:

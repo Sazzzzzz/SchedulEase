@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import enum
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Any, ClassVar, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Self
 
 import polars as pl
+
+if TYPE_CHECKING:
+    from python.service import EamisService
 
 
 class Weekdays(enum.Enum):
@@ -29,6 +32,12 @@ class Weekdays(enum.Enum):
 
 
 class Duration(NamedTuple):
+    """
+    NamedTuple representing a time duration with start and end units.
+
+    Basically dedicated to `Course` class to represent its time slots.
+    """
+
     start: int
     end: int
 
@@ -51,8 +60,6 @@ class Duration(NamedTuple):
 class Course:
     """
     Class representing a course with its details.
-    All courses takes up minimal resources in completer and all properties are cached when accessed later.
-    Make sure to change class attribute `df` to actual DataFrame before using this class.
     """
 
     id: str
@@ -64,40 +71,15 @@ class Course:
     expLessonGroup: Optional[int]
     expLessonGroupNo: Optional[int]
 
-    # TODO: Change this to a proper DataFrame loading mechanism
-    df: ClassVar[pl.DataFrame] = pl.DataFrame()
+    # Every Course instance will have a reference to father service
+    # This is to avoid hidden dependencies on the EamisService on class level
+    # And the memory overhead is negligible
+    service: EamisService = field(repr=False, hash=False, compare=False)
 
-    @staticmethod
-    def from_row(row: dict[str, Any]) -> "Course":
-        """
-        Create a Course instance from a Polars DataFrame row.
-        """
-        return Course(
-            id=row["id"],
-            name=row["name"],
-            code=row["code"],
-            teachers=list(row["teachers"]),
-            profileUrl=row["profileUrl"],
-            profileId=row["profileId"],
-            expLessonGroup=row["expLessonGroup"],
-            expLessonGroupNo=row["expLessonGroupNo"],
-        )
-
-    @staticmethod
-    def overlaps(course1: Course, course2: Course) -> bool:
-        """
-        Check if two courses overlap based on their time slots.
-        """
-        return any(
-            Duration.overlaps(
-                course1.duration.get(weekday, Duration.default()),
-                course2.duration.get(weekday, Duration.default()),
-            )
-            for weekday in Weekdays
-        )
-
+    # These are two factories to create a Course instance
+    # Actually `@classmethod` and `@staticmethod` are interchangeable here because no inheritance is used
     @classmethod
-    def from_input(cls, query: str) -> Course:
+    def from_input(cls, query: str, service: EamisService) -> Course:
         """
         Create a Course instance from a query string.
         The query string should be in the format "[id]" or "[id:groupNo]".
@@ -105,13 +87,13 @@ class Course:
         if m := re.match(r"\[(\d+):(\d+)\]", query):
             course_id = int(m.group(1))
             group_no = int(m.group(2))
-            row = cls.df.filter(
+            row = service.course_info.filter(
                 (pl.col("id") == course_id) & (pl.col("expLessonGroupNo") == group_no)
             ).to_dicts()
         elif m := re.match(r"\[(\d+)\]", query):
             course_id = int(m.group(1))
             group_no = None
-            row = cls.df.filter(
+            row = service.course_info.filter(
                 (pl.col("id") == course_id) & (pl.col("expLessonGroupNo").is_null())
             ).to_dicts()
         else:
@@ -125,7 +107,38 @@ class Course:
             raise ValueError(
                 f"Multiple courses found with id={course_id} and group_no={group_no}"
             )
-        return Course.from_row(row[0])
+        return Course.from_row(row[0], service)
+
+    @classmethod
+    def from_row(cls, row: dict[str, Any], service: EamisService) -> Self:
+        """
+        Create a Course instance from a Polars DataFrame row.
+        """
+        return cls(
+            id=str(row["id"]),
+            name=row["name"],
+            code=row["code"],
+            teachers=list(row["teachers"]),
+            profileUrl=row["profileUrl"],
+            profileId=row["profileId"],
+            expLessonGroup=row["expLessonGroup"],
+            expLessonGroupNo=row["expLessonGroupNo"],
+            service=service,
+        )
+
+    # This method can stay as it operates on two instances
+    @staticmethod
+    def overlaps(course1: Course, course2: Course) -> bool:
+        """
+        Check if two courses overlap based on their time slots.
+        """
+        return any(
+            Duration.overlaps(
+                course1.duration.get(weekday, Duration.default()),
+                course2.duration.get(weekday, Duration.default()),
+            )
+            for weekday in Weekdays
+        )
 
     @cached_property
     def search_string(self) -> str:
@@ -153,7 +166,9 @@ class Course:
         """
         Get specific details about a course from the DataFrame.
         """
-        course_details = self.df.filter(
+        # This still relies on the df, which is acceptable if you see
+        # Course as a "view" into the main DataFrame.
+        course_details = self.service.course_info.filter(
             (pl.col("id") == self.id)
             & (
                 pl.col("expLessonGroupNo") == self.expLessonGroupNo

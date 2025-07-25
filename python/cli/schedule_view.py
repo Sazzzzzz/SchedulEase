@@ -212,21 +212,16 @@ class ScheduleView:
 
 # --- Main Application Logic ---
 if __name__ == "__main__":
-    import polars as pl
-    from config import load_config
+    from python.tests.dummy_service import DummyEamisService
 
     try:
-        # Load configuration and initialize service
-        config = load_config()
-        service = EamisService(config)
+        # Initialize dummy service for testing
+        service = DummyEamisService()
 
-        # Load course data for testing
-        df = pl.read_json("data/output.json")
-
-        # Create some test courses (in real usage, these would come from previous page)
-        Course.df = df
+        # Load course data for testing from the dummy service
         test_courses = [
-            Course.from_row(row) for row in df.to_dicts()[:2]
+            Course.from_row(row, service)
+            for row in service.course_info.head(2).to_dicts()
         ]  # Take first 2 courses
 
         # Create and run scheduler
@@ -236,8 +231,9 @@ if __name__ == "__main__":
     except FileNotFoundError:
         console = Console()
         console.print(
-            "[red]Error: Could not find required files. Please ensure 'data/output.json' exists.[/red]"
+            "[red]Error: Could not find required files. Please ensure 'python/data/output.json' exists.[/red]"
         )
     except Exception as e:
         console = Console()
         console.print(f"[red]An error occurred: {e}[/red]")
+

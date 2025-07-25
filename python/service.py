@@ -1,6 +1,7 @@
 """
 Core service for interacting with the EAMIS backend.
 """
+from __future__ import annotations
 
 import enum
 import random
@@ -26,9 +27,8 @@ import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
-
-from config import load_config
-from shared import Course
+from python.config import load_config
+from python.shared import Course
 
 # API URLs
 LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")
@@ -55,8 +55,10 @@ class LoginError(ServiceError):
 class ParseError(ServiceError):
     """Raised for errors in parsing data from the service, likely due to changes in the API or HTML structure."""
 
+
 class ElectError(ServiceError):
     """Raised for errors during course election, such as failure to elect or cancel a course."""
+
 
 class Profile(NamedTuple):
     title: str
@@ -299,7 +301,7 @@ class EamisService:
     @cached_property
     def course_info(self) -> pl.DataFrame:
         """
-        Cached property to store course information as a Polars DataFrame.
+        Cached property to store course information as a Polars DataFrame. All dataframe references points to this property.
 
         This invokes profile method and in turn invokes login.
         """
