@@ -3,7 +3,6 @@ import os
 import re
 from typing import Any, Generator
 
-import polars as pl
 from prompt_toolkit import PromptSession
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.completion import Completer, Completion

@@ -2,9 +2,8 @@
 Presenter for the whole SchedulEase application.
 """
 
-from cli.config_view import setup_config
+from cli.config_view import setup_config, load_config
 from service import EamisService
-from config import load_config, create_config
 
 
 def main():

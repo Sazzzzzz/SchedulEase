@@ -9,7 +9,8 @@ from Crypto.Util.Padding import pad
 DEFAULT_CONFIG_TEMPLATE = """# SchedulEase Configuration File
 
 # --- Request Headers ---
-# These headers mimic a real browser.
+# General headers to mimic a real browser.
+# You may modify them to your own browser's headers if needed.
 [headers]
 User-Agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
@@ -28,11 +29,11 @@ Sec-Ch-Ua-Mobile = "?0"
 Sec-Ch-Ua-Platform = '"macOS"'
 
 # --- User Credentials ---
-# !!! IMPORTANT !!!
-# Please fill in your university portal username and password below.
+# University portal username and password below.
+# Actual password will not be recorded for safety. 
+# DO NOT share this file with others.
 [user]
 account = "{account}"
-password = "{password}"
 encrypted_password = "{encrypted_password}"
 """
 
@@ -61,7 +62,6 @@ def create_config(account: str, password: str) -> None:
         f.write(
             DEFAULT_CONFIG_TEMPLATE.format(
                 account=account,
-                password=password,
                 encrypted_password=encrypt(password),
             )
         )
@@ -77,4 +77,4 @@ def load_config() -> dict[str, Any]:
     with open(CONFIG_PATH, "rb") as f:
         return tomllib.load(f)
 
-# TODO: Add test login function to verify credentials
+# TODO: Consider add test login function to verify credentials
