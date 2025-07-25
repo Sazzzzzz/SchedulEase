@@ -13,8 +13,8 @@ from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.table import Table
 
-from service import EamisService
-from shared import Course
+from python.service import EamisService
+from python.shared import Course
 
 
 class TimeValidator(Validator):
@@ -213,7 +213,6 @@ class ScheduleView:
 # --- Main Application Logic ---
 if __name__ == "__main__":
     import polars as pl
-
     from config import load_config
 
     try:

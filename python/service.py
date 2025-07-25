@@ -123,7 +123,6 @@ class EamisService:
     # 1. The login process is only executed once per instance.
     # 2. The values will be available when accessed instead of manual invocation.
 
-    #
     @cached_property
     def postlogin_response(self) -> httpx.Response:
         """Cached property to store the response after login."""

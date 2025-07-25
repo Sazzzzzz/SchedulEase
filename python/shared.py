@@ -64,6 +64,7 @@ class Course:
     expLessonGroup: Optional[int]
     expLessonGroupNo: Optional[int]
 
+    # TODO: Change this to a proper DataFrame loading mechanism
     df: ClassVar[pl.DataFrame] = pl.DataFrame()
 
     @staticmethod

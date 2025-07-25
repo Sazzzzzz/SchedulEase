@@ -11,7 +11,7 @@ from prompt_toolkit.formatted_text import ANSI, HTML
 from rich.console import Console
 from rich.table import Table
 
-from shared import Course, Weekdays
+from python.shared import Course, Weekdays
 
 
 class CourseCompleter(Completer):
