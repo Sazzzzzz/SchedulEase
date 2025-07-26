@@ -1,30 +1,19 @@
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
+import httpx
 import polars as pl
 
-from python.service import EamisService
+from python.service import EamisService, Profile
 
 
 class DummyEamisService(EamisService):
     """
     A dummy EamisService for testing purposes.
     It inherits from EamisService, loads course data from a local file,
-    and raises errors for network-related methods using __getattribute__.
+    and mimics network methods to return empty/mock responses.
     """
-
-    # Methods that should not be called in the dummy service
-    _mocked_methods = {
-        "initial_connection",
-        "login",
-        "postlogin_response",
-        "profiles",
-        "get_profiles",
-        "get_course_data",
-        "get_all_course_info",
-        "elect_course",
-        "elect_courses",
-    }
 
     def __init__(self):
         """
@@ -45,13 +34,37 @@ class DummyEamisService(EamisService):
             )
         return pl.read_json(self.data_path)
 
-    def __getattribute__(self, name: str):
-        """
-        Intercepts attribute access. If the attribute is a mocked network method,
-        it raises a NotImplementedError. Otherwise, it proceeds as normal.
-        """
-        if name in object.__getattribute__(self, "_mocked_methods"):
-            raise NotImplementedError(
-                f"'{name}' is a network-bound method and is not implemented in DummyEamisService."
-            )
-        return object.__getattribute__(self, name)
+    # --- Override network-bound methods ---
+
+    def initial_connection(self) -> None:
+        """Mimics a successful connection."""
+        pass
+
+    def login(self) -> httpx.Response:
+        """Returns a mock successful login response."""
+        return httpx.Response(200, text="Mock login successful")
+
+    @cached_property
+    def postlogin_response(self) -> httpx.Response:
+        """Returns a mock response."""
+        return self.login()
+
+    def get_profiles(self) -> list[Profile]:
+        """Returns an empty list of profiles."""
+        return []
+
+    def get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
+        """Returns an empty list of course data."""
+        return []
+
+    def get_all_course_info(self) -> pl.DataFrame:
+        """Returns the DataFrame from the local file."""
+        return self.course_info
+
+    def elect_course(self, *args, **kwargs) -> None:
+        """Mimics a successful course election."""
+        pass
+
+    def elect_courses(self, *args, **kwargs) -> None:
+        """Mimics a successful batch course election."""
+        pass

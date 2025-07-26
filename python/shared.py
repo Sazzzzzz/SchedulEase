@@ -62,7 +62,7 @@ class Course:
     Class representing a course with its details.
     """
 
-    id: str
+    id: int
     name: str
     code: str
     teachers: list[str]
@@ -115,7 +115,8 @@ class Course:
         Create a Course instance from a Polars DataFrame row.
         """
         return cls(
-            id=str(row["id"]),
+            # TODO: Use `str` for course id
+            id=row["id"],
             name=row["name"],
             code=row["code"],
             teachers=list(row["teachers"]),

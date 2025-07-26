@@ -8,7 +8,6 @@ import schedule
 from prompt_toolkit import PromptSession
 from prompt_toolkit.validation import ValidationError, Validator
 from rich.console import Console
-from rich.live import Live
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.table import Table
@@ -93,6 +92,7 @@ class ScheduleView:
                 return ""
             except Exception as e:
                 self.console.print(f"[red]Error: {e}[/red]")
+                return ""
 
     def election_job(self):
         """Job function to be executed at scheduled time."""
@@ -114,40 +114,6 @@ class ScheduleView:
 
         except Exception as e:
             self.logger.error(f"❌ Error during course election: {e}")
-
-    def create_status_table(self) -> Table:
-        """Create status table for live display."""
-        table = Table(title="[bold cyan]Election Scheduler Status[/bold cyan]")
-        table.add_column("Property", style="bold")
-        table.add_column("Value", style="green")
-
-        table.add_row("Scheduled Time", self.time or "Not set")
-        table.add_row("Courses Count", str(len(self.courses)))
-        table.add_row("Status", "Running" if self.is_running else "Waiting")
-        table.add_row("Current Time", datetime.now().strftime("%H:%M:%S"))
-
-        if self.courses:
-            table.add_row("", "")  # Separator
-            table.add_row("Scheduled Courses", "")
-            for i, course in enumerate(self.courses, 1):
-                table.add_row(f"  Course {i}", f"{course.name} - {course.teachers}")
-
-        return table
-
-    def monitoring_loop(self):
-        """Main monitoring loop with live display."""
-        with Live(
-            self.create_status_table(), refresh_per_second=1, console=self.console
-        ) as live:
-            self.logger.info("📊 Monitoring started. Press Ctrl+C to stop.")
-
-            while not self.stop_event.is_set():
-                try:
-                    schedule.run_pending()
-                    live.update(self.create_status_table())
-                    time.sleep(1)
-                except Exception as e:
-                    self.logger.error(f"Error in monitoring loop: {e}")
 
     def run(self, courses: list[Course]):
         """Main application entry point with courses provided as parameters."""
@@ -176,38 +142,74 @@ class ScheduleView:
                 return
 
             # Get time input
-
-            if not (time := self.get_time_input()):
+            if not (time_str := self.get_time_input()):
                 return
 
-            self.time = time
-
             # Schedule the job
-            schedule.every().day.at(time).do(self.election_job)
+            schedule.clear()  # Clear any existing jobs
+            schedule.every().day.at(time_str).do(self.election_job).tag("election")
 
-            self.console.print(f"\n[green]✅ Election scheduled for {time}[/green]")
+            self.console.print(f"\n[green]✅ Election scheduled for {time_str}[/green]")
             self.console.print(
                 f"[green]📚 {len(self.courses)} courses will be elected[/green]"
             )
-
-            self.is_running = True
-
-            # Start monitoring in a separate thread
-            monitor_thread = threading.Thread(target=self.monitoring_loop, daemon=True)
-            monitor_thread.start()
-
-            # Keep main thread alive and handle keyboard interrupt
-            try:
-                monitor_thread.join()
-            except KeyboardInterrupt:
-                self.console.print("\n[yellow]🛑 Stopping scheduler...[/yellow]")
-                self.stop_event.set()
-                schedule.clear()
-                self.logger.info("Scheduler stopped by user.")
+            self.console.print(
+                "[bold]Returning to main menu. The job will run in the background.[/bold]"
+            )
+            input("Press Enter to continue...")
 
         except Exception as e:
             self.console.print(f"[red]❌ Unexpected error: {e}[/red]")
             self.logger.error(f"Unexpected error: {e}")
+
+
+# --- Main Application Logic ---
+if __name__ == "__main__":
+    from python.tests.dummy_service import DummyEamisService
+
+    try:
+        # Initialize dummy service for testing
+        service = DummyEamisService()
+
+        # Load course data for testing from the dummy service
+        test_courses = [
+            Course.from_row(row, service)
+            for row in service.course_info.head(2).to_dicts()
+        ]  # Take first 2 courses
+
+        # Create and run scheduler
+        scheduler = ScheduleView(service)
+        scheduler.run(test_courses)
+
+        if schedule.jobs:
+            print("\nJob scheduled. In a real run, this would run in the background.")
+            print(f"Next run: {schedule.next_run}")
+
+    except FileNotFoundError:
+        console = Console()
+        console.print(
+            "[red]Error: Could not find required files. Please ensure 'python/data/output.json' exists.[/red]"
+        )
+    except Exception as e:
+        console = Console()
+        console.print(f"[red]An error occurred: {e}[/red]")
+
+        #     # Start monitoring in a separate thread
+        #     monitor_thread = threading.Thread(target=self.monitoring_loop, daemon=True)
+        #     monitor_thread.start()
+
+        #     # Keep main thread alive and handle keyboard interrupt
+        #     try:
+        #         monitor_thread.join()
+        #     except KeyboardInterrupt:
+        #         self.console.print("\n[yellow]🛑 Stopping scheduler...[/yellow]")
+        #         self.stop_event.set()
+        #         schedule.clear()
+        #         self.logger.info("Scheduler stopped by user.")
+
+        # except Exception as e:
+        #     self.console.print(f"[red]❌ Unexpected error: {e}[/red]")
+        #     self.logger.error(f"Unexpected error: {e}")
 
 
 # --- Main Application Logic ---

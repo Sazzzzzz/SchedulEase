@@ -1,18 +1,24 @@
 import io
-import os
 import re
-from typing import Any, Generator
+from itertools import combinations
+from typing import Any, Generator, Optional
 
-from prompt_toolkit import PromptSession
-from prompt_toolkit import print_formatted_text as print
+from prompt_toolkit import Application
+from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import Completer, Completion
-from prompt_toolkit.formatted_text import ANSI, HTML
+from prompt_toolkit.formatted_text import ANSI
+from prompt_toolkit.layout.containers import Float, FloatContainer, HSplit, Window
+from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
+from prompt_toolkit.layout.layout import Layout
+from prompt_toolkit.layout.menus import CompletionsMenu
 from rich.console import Console
 from rich.table import Table
 
-from python.shared import Course, Weekdays
 from python.service import EamisService
+from python.shared import Course, Weekdays
+
 # TODO: fix the bug related to string Course id
+
 
 class CourseCompleter(Completer):
     """
@@ -52,16 +58,20 @@ class Curriculum:
     """
 
     # TODO: support deleting course
-    def __init__(self):
-        self.courses: list[Course] = []
+    def __init__(self, initial_courses: Optional[list[Course]] = None):
+        self.courses: list[Course] = initial_courses or []
         self.conflicts: dict[
-            str, set[str]
+            int, set[int]
         ] = {}  # Use course IDs instead of Course objects
+        self._rebuild_conflicts()
 
     def add_course(self, course: Course):
-        # Conflict Test
+        # Confliction Test
         for existing_course in self.courses:
-            if existing_course.id == course.id:
+            if (
+                existing_course.id == course.id
+                and existing_course.expLessonGroupNo == course.expLessonGroupNo
+            ):
                 return False  # Course already exists
             if Course.overlaps(existing_course, course):
                 self.conflicts.setdefault(existing_course.id, set()).add(course.id)
@@ -69,109 +79,77 @@ class Curriculum:
         self.courses.append(course)
         return True
 
+    def remove_course(self, course_to_remove: Course):
+        """Removes a course and recalculates all conflicts."""
+        self.courses.remove(course_to_remove)
+        self._rebuild_conflicts()
 
+    def _rebuild_conflicts(self):
+        """Recalculates all conflicts from scratch."""
+        self.conflicts.clear()
+        for c1, c2 in combinations(self.courses, 2):
+            if Course.overlaps(c1, c2):
+                self.conflicts.setdefault(c1.id, set()).add(c2.id)
+                self.conflicts.setdefault(c2.id, set()).add(c1.id)
+
+    def clear_all(self):
+        """Clears all courses and conflicts."""
+        self.courses.clear()
+        self.conflicts.clear()
+
+
+# TUI implementation
 class ElectionView:
-    """
-    A class responsible for accepting course selections and displaying the curriculum table with `rich`.
-    The upper part of the screen is reserved for displaying the curriculum table,
-    while the lower part is reserved for user input with prompted hints.
-    """
-
-    def __init__(self, service: EamisService):
-        self.io = io.StringIO()
-        self.console = Console(file=self.io, force_terminal=True, width=100)
-        self.session = PromptSession()
-        self.curriculum = Curriculum()
+    def __init__(self, service: EamisService) -> None:
         self.service = service
+        self.curriculum = Curriculum()
+        self.completer = CourseCompleter(service)
+        self.input = Buffer(
+            completer=self.completer,
+            complete_while_typing=True,
+            accept_handler=self.add_course,
+            multiline=False,
+        )
+        self.main = HSplit(
+            [
+                # temporarily disabled curriculum table
+                Window(
+                    content=FormattedTextControl(
+                        self.get_curriculum_table, focusable=False
+                    ),
+                    wrap_lines=True,
+                ),
+                Window(height=1, char="-"),
+                Window(content=BufferControl(buffer=self.input)),
+            ]
+        )
+        self.layout = Layout(
+            FloatContainer(
+                content=self.main,
+                floats=[
+                    Float(
+                        # TODO: Adjust position and size
+                        content=CompletionsMenu(
+                            # max_height=5, scroll_offset=1
+                        ),
+                        xcursor=True,
+                        ycursor=True,
+                    ),
+                ],
+            )
+        )
 
-    def clear_screen(self):
-        """Clear the terminal screen."""
-        os.system("cls" if os.name == "nt" else "clear")
+        self.io = io.StringIO()
+        self.console = Console(
+            file=self.io,
+            force_terminal=True,
+            # TODO: May be adjusted later
+            width=150,
+        )
 
-    def display_layout(self):
-        """Display the complete layout with curriculum table and instructions."""
-        self.clear_screen()
-
-        # Display curriculum table
-        curriculum_output = self.get_curriculum_table()
-        print(ANSI(curriculum_output))
-
-        # Display selected courses summary
-        if self.curriculum.courses:
-            print(HTML("<b><ansigreen>Selected Courses:</ansigreen></b>"))
-            for i, course in enumerate(self.curriculum.courses, 1):
-                conflict_marker = (
-                    " <ansired>⚠ CONFLICT</ansired>"
-                    if course.id in self.curriculum.conflicts
-                    else ""
-                )
-                print(
-                    HTML(f"  {i}. {course.name} - {course.teachers}{conflict_marker}")
-                )
-
-        # Display conflicts if any
-        if self.curriculum.conflicts:
-            print(HTML("\n<b><ansired>Conflicts Detected:</ansired></b>"))
-            for course_id, conflicting_course_ids in self.curriculum.conflicts.items():
-                # Find course by ID
-                course = next(
-                    (c for c in self.curriculum.courses if c.id == course_id), None
-                )
-                if course:
-                    conflict_names = []
-                    for conf_id in conflicting_course_ids:
-                        conf_course = next(
-                            (c for c in self.curriculum.courses if c.id == conf_id),
-                            None,
-                        )
-                        if conf_course:
-                            conflict_names.append(conf_course.name)
-                    if conflict_names:
-                        conflict_list = ", ".join(conflict_names)
-                        print(
-                            HTML(f"  • {course.name} conflicts with: {conflict_list}")
-                        )
-
-        print("\n" + "=" * 80)
-        print(HTML("<b><ansicyan>Commands:</ansicyan></b>"))
-        print("  • Type course name/teacher to search and add")
-        print("  • 'remove <number>' to remove a course by number")
-        print("  • 'clear' to remove all courses")
-        print("  • 'quit' or Ctrl+C to exit")
-        print("=" * 80 + "\n")
-
-    def add_course(self, course: Course):
-        """Add a course to the curriculum."""
-        return self.curriculum.add_course(course)
-
-    def remove_course(self, index: int):
-        """Remove a course by index (1-based)."""
-        if 1 <= index <= len(self.curriculum.courses):
-            course_to_remove = self.curriculum.courses[index - 1]
-            self.curriculum.courses.remove(course_to_remove)
-
-            # Clean up conflicts
-            course_id = course_to_remove.id
-            if course_id in self.curriculum.conflicts:
-                # Remove this course from other courses' conflict lists
-                for conflicting_course_id in self.curriculum.conflicts[course_id]:
-                    if conflicting_course_id in self.curriculum.conflicts:
-                        self.curriculum.conflicts[conflicting_course_id].discard(
-                            course_id
-                        )
-                        if not self.curriculum.conflicts[conflicting_course_id]:
-                            del self.curriculum.conflicts[conflicting_course_id]
-                del self.curriculum.conflicts[course_id]
-
-            return True
-        return False
-
-    def clear_all_courses(self):
-        """Clear all courses from the curriculum."""
-        self.curriculum.courses.clear()
-        self.curriculum.conflicts.clear()
-
-    def get_curriculum_table(self, classes: int = 14):
+    def get_curriculum_table(self, classes: int = 14) -> ANSI:
+        # TODO: cleaner logic
+        # Current logic is generated by AI
         """
         Displays a curriculum table based on schedule data.
         """
@@ -183,7 +161,7 @@ class ElectionView:
         )
 
         # Define columns
-        table.add_column("Classes", style="dim", width=6)
+        table.add_column("Classes", style="dim")
         weekdays_list = list(Weekdays)
         for day in weekdays_list:
             table.add_column(day.value, justify="center")
@@ -220,110 +198,29 @@ class ElectionView:
         self.io.seek(0)
         self.io.truncate(0)
 
-        return output
+        return ANSI(output)
 
-    def run(self):
-        """Main application loop."""
-        course_completer = CourseCompleter(self.service)
-
-        try:
-            while True:
-                self.display_layout()
-
-                user_input = self.session.prompt(
-                    "Enter command or search for course: ",
-                    completer=course_completer,
-                    complete_while_typing=True,
-                ).strip()
-
-                if not user_input:
-                    continue
-
-                # Handle commands
-                if user_input.lower() == "quit":
-                    break
-                elif user_input.lower() == "clear":
-                    self.clear_all_courses()
-                    continue
-                elif user_input.lower().startswith("remove "):
-                    try:
-                        index = int(user_input.split(" ", 1)[1])
-                        if self.remove_course(index):
-                            print(
-                                HTML(
-                                    "<ansigreen>Course removed successfully!</ansigreen>"
-                                )
-                            )
-                        else:
-                            print(
-                                HTML(
-                                    f"<ansired>Invalid course number: {index}</ansired>"
-                                )
-                            )
-                        input("Press Enter to continue...")
-                    except (ValueError, IndexError):
-                        print(
-                            HTML(
-                                "<ansired>Invalid remove command. Use: remove <number></ansired>"
-                            )
-                        )
-                        input("Press Enter to continue...")
-                    continue
-
-                # Try to parse as course selection
-                try:
-                    course = Course.from_input(user_input, self.service)
-                    if course:
-                        if self.add_course(course):
-                            print(
-                                HTML(
-                                    f"<ansigreen>Added: {course.name} - {course.teachers}</ansigreen>"
-                                )
-                            )
-                        else:
-                            print(
-                                HTML(
-                                    "<ansiyellow>Course already selected!</ansiyellow>"
-                                )
-                            )
-                        input("Press Enter to continue...")
-                    else:
-                        print(
-                            HTML(
-                                "<ansired>Course not found. Please try again.</ansired>"
-                            )
-                        )
-                        input("Press Enter to continue...")
-                except Exception as e:
-                    print(HTML(f"<ansired>Error adding course: {e}</ansired>"))
-                    input("Press Enter to continue...")
-
-        except KeyboardInterrupt:
-            print(HTML("\n<ansiyellow>Exiting application...</ansiyellow>"))
+    def add_course(self, buffer: Buffer) -> bool:
+        """Adds a course to the curriculum based on user input."""
+        course = Course.from_input(buffer.text, self.service)
+        return not self.curriculum.add_course(course)
 
 
-# --- Main Application Logic ---
 if __name__ == "__main__":
+    # This module is only responsible for certain views, not for running the application.
+    # Following lines are for testing purposes only.
+    from prompt_toolkit import Application
+    from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
+
     from python.tests.dummy_service import DummyEamisService
 
-    try:
-        # Create and run the election view with the dummy service
-        service = DummyEamisService()
-        election_view = ElectionView(service)
+    kb = KeyBindings()
 
-        print(
-            HTML("<b><ansicyan>Welcome to SchedulEase Course Selection!</ansicyan></b>")
-        )
-        print("Loading course data...")
-        input("Press Enter to start...")
+    @kb.add("c-c")
+    def _(event: KeyPressEvent):
+        """Pressing Ctrl-C will exit the application."""
+        event.app.exit()
 
-        election_view.run()
-
-    except FileNotFoundError:
-        print(
-            HTML(
-                "<ansired>Error: Could not find 'python/data/output.json'. Please ensure the file exists.</ansired>"
-            )
-        )
-    except Exception as e:
-        print(HTML(f"<ansired>An error occurred: {e}</ansired>"))
+    view = ElectionView(DummyEamisService())
+    app = Application(layout=view.layout, full_screen=True, key_bindings=kb)
+    app.run()
