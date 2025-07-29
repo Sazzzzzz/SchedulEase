@@ -83,6 +83,7 @@ class Course:
         """
         Create a Course instance from a query string.
         The query string should be in the format "[id]" or "[id:groupNo]".
+        Otherwise raise a ValueError.
         """
         if m := re.match(r"\[(\d+):(\d+)\]", query):
             course_id = int(m.group(1))
