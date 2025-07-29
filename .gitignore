@@ -15,3 +15,6 @@ test*.*
 .DS_Store
 data/
 .vscode/
+
+# Rust build artifacts
+target/
