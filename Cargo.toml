@@ -1,0 +1,19 @@
+[package]
+name = "SchedulEase"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "SchedulEase"
+path = "rust/src/main.rs"
+
+[dependencies]
+once_cell = "1.21.3"
+polars = "0.49.1"
+reqwest = { version = "0.12.22", features = ["cookies"] }
+scraper = "0.23.1"
+serde = "1.0.219"
+
+[[example]]
+name = "test_service"
+path = "rust/example/test_service.rs"
