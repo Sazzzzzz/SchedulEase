@@ -32,7 +32,7 @@ static ELECT_URL: Lazy<Url> = Lazy::new(|| {
         .expect("Failed to join ELECT_URL")
 });
 
-struct EamisService {
+pub struct EamisService {
     client: reqwest::Client,
     account: String,
     encrypted_password: String,

@@ -11,7 +11,7 @@ wheels/
 
 # Custom files
 reference/
-test*.*
+test.*
 .DS_Store
 data/
 .vscode/
