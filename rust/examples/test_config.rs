@@ -24,4 +24,8 @@ mod tests {
     }
 }
 
-fn main() {}
+use schedulease::config::{load_config};
+fn main() {
+    let config = load_config().expect("Failed to load config");
+    println!("{:#?}", config);
+}
