@@ -1,5 +1,4 @@
 use crate::config::Config;
-use encoding_rs::GBK;
 use once_cell::sync::Lazy;
 use reqwest::{
     blocking::{Client, RequestBuilder, Response},
@@ -167,9 +166,9 @@ impl EamisService {
 
         let code = content["code"].as_i64().unwrap_or(-1);
         let message = content["message"].as_str().unwrap_or("Unknown error");
-
+        // TODO: Replace print here to actual logic
         match code {
-            0 => Ok(()),
+            0 => {println!("Login successful, request content: {}", content); Ok(())},
             10110001 => Err(ServiceError::LoginError {
                 msg: format!(
                     "Login failed: {}. Please check your account and password.",
