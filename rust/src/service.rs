@@ -1,7 +1,7 @@
 use crate::config::Config;
 use once_cell::sync::Lazy;
 use reqwest::{
-    blocking::{Client, RequestBuilder, Response},
+    blocking::{Client, RequestBuilder},
     header::{HeaderMap, HeaderName, HeaderValue},
     Url,
 };
@@ -45,6 +45,22 @@ pub struct EamisService {
 
     account: String,
     encrypted_password: String,
+
+    postlogin_url: Option<Url>,
+    profiles: Option<Vec<Profile>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Profile {
+    pub title: String,
+    pub url: Url,
+    pub id: String,
+}
+
+#[derive(PartialEq)]
+pub enum Operation {
+    Elect,
+    Cancel,
 }
 
 impl EamisService {
@@ -72,8 +88,12 @@ impl EamisService {
             headers,
             account: config.user.account.clone(),
             encrypted_password: config.user.encrypted_password.clone(),
+            postlogin_url: None,
+            profiles: None,
         }
     }
+
+    // ---- Helper Functions ----
     /// A helper method to append headers to get request.
     pub fn get(&self, url: &Url) -> RequestBuilder {
         self.client.get(url.clone()).headers(self.headers.clone())
@@ -83,7 +103,12 @@ impl EamisService {
     pub fn post(&self, url: &Url) -> RequestBuilder {
         self.client.post(url.clone()).headers(self.headers.clone())
     }
-
+    /// Helper function to create a timestamp in milliseconds.
+    pub fn create_timestamp() -> String {
+        let now = std::time::SystemTime::now();
+        let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap();
+        (duration.as_secs() * 1000 + duration.subsec_millis() as u64).to_string()
+    }
     /// Test the initial connection to the EAMIS service. Raises `ConnectionError` if the connection fails.
     ///
     /// This is a single method that must be invoked manually to ensure the service is reachable.
@@ -98,8 +123,22 @@ impl EamisService {
         Ok(())
     }
 
+    // ---- Cached Properties ----
+
+    /// Returns the post-login URL.
+    ///
+    /// Similar to cached property design in Python
+    pub fn postlogin_url(&mut self) -> Url {
+        if let Some(url) = &self.postlogin_url {
+            return url.clone();
+        }
+        // If postlogin_url is not set, we need to login first
+        let login_url = self.login().unwrap();
+        self.postlogin_url = Some(login_url.clone());
+        login_url
+    }
     /// Login to the EAMIS service
-    pub fn login(&mut self) -> Result<(), ServiceError> {
+    pub fn login(&mut self) -> Result<Url, ServiceError> {
         // Redirect to site
         let prelogin_response = self
             .get(&SITE_URL)
@@ -168,7 +207,7 @@ impl EamisService {
         let message = content["message"].as_str().unwrap_or("Unknown error");
         // TODO: Replace print here to actual logic
         match code {
-            0 => {println!("Login successful, request content: {}", content); Ok(())},
+            0 => Ok(()),
             10110001 => Err(ServiceError::LoginError {
                 msg: format!(
                     "Login failed: {}. Please check your account and password.",
@@ -177,13 +216,155 @@ impl EamisService {
             }),
             40000 => Err(ServiceError::LoginError {
                 msg: format!(
-                    "Login failed: {}。 Parameter error, likely due to a change in the API format.",
+                    "Login failed: {}. Parameter error, likely due to a change in the API format.",
                     message
                 ),
             }),
             _ => Err(ServiceError::LoginError {
                 msg: format!("Login failed with code {}: {}", code, message),
             }),
+        }?;
+        let link_str =
+            content["data"]["next"]["link"]
+                .as_str()
+                .ok_or_else(|| ServiceError::ParseError {
+                    msg: "Link field is not a string".to_string(),
+                })?;
+        let link = LOGIN_URL
+            .join(link_str)
+            .map_err(|e| ServiceError::ParseError {
+                msg: format!(
+                    "Failed to parse next link: {}. Likely due to a change in the API format.",
+                    e
+                ),
+            })?;
+        let postlogin_response = self
+            .get(&link)
+            .send()
+            .map_err(ServiceError::ConnectionError)?;
+        println!("Login successful. Redirecting to: {}", link);
+        Ok(postlogin_response.url().clone())
+    }
+
+    /// Course Profiles
+    pub fn profiles(&mut self) -> &Vec<Profile> {
+        // We avoid match here to avoid borrowing issues
+        if self.profiles.is_none() {
+            self.profiles = Some(self.get_profiles().unwrap());
+        }
+        self.profiles.as_ref().unwrap()
+    }
+
+    /// Fetch all election categories available to the user.
+    pub fn get_profiles(&mut self) -> Result<Vec<Profile>, ServiceError> {
+        let postlogin_url = self.postlogin_url();
+
+        let course_elect_menu_response = self
+            .get(&PROFILE_URL)
+            .header("Referer", postlogin_url.as_str())
+            .header("X-Requested-With", "XMLHttpRequest")
+            .query(&[("_", EamisService::create_timestamp())])
+            .send()?;
+
+        let response_url = course_elect_menu_response.url().clone();
+        let content = course_elect_menu_response.text()?;
+        let document = scraper::Html::parse_document(&content);
+
+        // Check if we got redirected to the wrong page
+        if response_url.path().contains("home") {
+            return Err(ServiceError::ElectionError {
+                msg: "Request was redirected to home page instead of course selection page."
+                    .to_string(),
+            });
+        }
+
+        if content.contains("无法选课") || content.contains("未到选课时间") {
+            return Err(ServiceError::ElectionError {
+                msg: "Course election menu is currently not available..".to_string(),
+            });
+        }
+
+        let elect_index_selector = scraper::Selector::parse("div[id^='electIndexNotice']").unwrap();
+        let selection_divs = document.select(&elect_index_selector);
+        let mut course_categories = Vec::new();
+        // TODO: Fix this long selector process
+        for div in selection_divs {
+            if let Some(title_element) = div.select(&scraper::Selector::parse("h3").unwrap()).next()
+            {
+                let title = title_element.inner_html().trim().to_string();
+                if let Some(link_element) = div
+                    .select(&scraper::Selector::parse("a[href]").unwrap())
+                    .next()
+                {
+                    if let Some(href) = link_element.value().attr("href") {
+                        let profile_id = href.split('=').last().unwrap_or("");
+                        if let Ok(url) = EAMIS_URL.join(href) {
+                            course_categories.push(Profile {
+                                title,
+                                url,
+                                id: profile_id.to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(course_categories)
+    }
+
+    pub fn elect_course(
+        &mut self,
+        course_id: &str,
+        profile_id: &str,
+        operation: Operation,
+    ) -> Result<(), ServiceError> {
+        let opt = match operation {
+            Operation::Elect => "elect",
+            Operation::Cancel => "cancel",
+        };
+
+        let elect_response = self
+            .post(&ELECT_URL)
+            .header("Referer", self.postlogin_url().as_str())
+            .header("X-Requested-With", "XMLHttpRequest")
+            .query(&[("_", EamisService::create_timestamp())])
+            .form(&[
+                ("optype", opt),
+                ("operator0", &format!("{}:{}:0", course_id, opt)),
+                ("lesson0", course_id),
+                ("profileId", profile_id),
+            ])
+            .send()?;
+
+        let content = elect_response.text()?;
+        println!("Elect response: {}", content);
+        if content.contains("选课成功") {
+            Ok(())
+        } else if content.contains("当前选课不开放") {
+            Err(ServiceError::ElectionError {
+                msg: "Course election is currently not open.".to_string(),
+            })
+        } else if content.contains("已经选过") {
+            Err(ServiceError::ElectionError {
+                msg: format!("Course {} is already elected.", course_id),
+            })
+        } else if content.contains("计划外名额已满") {
+            Err(ServiceError::ElectionError {
+                msg: format!(
+                    "Course {} is considered as extra and has no available spots.",
+                    course_id
+                ),
+            })
+        } else if content.contains("退课成功") && operation == Operation::Cancel {
+            Ok(())
+        } else {
+            Err(ServiceError::ElectionError {
+                msg: format!(
+                    "Failed to elect or cancel course {}. Response: {}",
+                    course_id, content
+                ),
+            })
         }
     }
 }
