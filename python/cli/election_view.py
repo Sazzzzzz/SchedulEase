@@ -109,6 +109,7 @@ class Curriculum:
 
 # TUI implementation
 class ElectionView(View):
+    """Election Interface"""
     def __init__(self, service: EamisService) -> None:
         super().__init__()
         # Backend service
@@ -178,9 +179,7 @@ class ElectionView(View):
                 floats=[
                     Float(
                         # TODO: Adjust position and size
-                        content=CompletionsMenu(
-                            # max_height=5, scroll_offset=1
-                        ),
+                        content=CompletionsMenu(max_height=12, scroll_offset=1),
                         xcursor=True,
                         ycursor=True,
                     ),

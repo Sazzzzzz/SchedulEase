@@ -209,7 +209,7 @@ class EamisService:
         return self.get_profiles()
 
     def get_profiles(self) -> list[Profile]:
-        """Fetch all election categories available for the user."""
+        """Fetch all election categories available to the user."""
         try:
             course_elect_menu_response = self.client.get(
                 PROFILE_URL,
@@ -227,7 +227,7 @@ class EamisService:
                 f"An unknown error occurred while fetching course election menu: {e}"
             ) from e
         soup = BeautifulSoup(course_elect_menu_response.content, "lxml")
-
+        print(soup.prettify())  # Debugging output to see the HTML structure
         # Check if the course election menu is available
         if soup.find(string=re.compile(r"无法选课")):
             raise ServiceError("Course election menu is currently not available.")
@@ -324,7 +324,7 @@ class EamisService:
         """
         Elect or cancel a specific course.
 
-        This is not dependent on `profile` and `course_info` properties. Relies only on `self.client`.
+        This is not dependent on `profile` and `course_info` properties. Relying only on `self.client`.
         """
         opt = str(operation.value).lower()
         # FIXME: This might not be the correct way to handle expLessonGroup
@@ -541,7 +541,6 @@ class EamisService:
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
-    service.get_profiles()
     # service.course_info
     # import json
 
