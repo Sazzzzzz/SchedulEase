@@ -18,6 +18,7 @@ from prompt_toolkit.layout import (
 )
 from prompt_toolkit.layout.containers import HSplit
 from prompt_toolkit.validation import ValidationError, Validator
+from prompt_toolkit.widgets.toolbars import ValidationToolbar
 from rich.console import Group
 from rich.logging import RichHandler
 from rich.panel import Panel
@@ -83,7 +84,6 @@ class ScheduleView(View):
         self.state = State.PREINPUT
         self.courses: list[Course] = []
         self.target_time: Optional[datetime] = None
-        self.error_message: str = ""
 
         # Input buffer for time entry
         self.time_buffer = Buffer(
@@ -99,7 +99,7 @@ class ScheduleView(View):
         # UI Components - Header (always visible)
         self.header = Window(
             content=FormattedTextControl(self.get_header),
-            height=5,
+            height=6,
             wrap_lines=True,
         )
 
@@ -156,28 +156,20 @@ class ScheduleView(View):
             filter=Condition(lambda: self.state is State.POSTINPUT),
         )
 
-        # Error toolbar (visible when there are errors)
-        self.error_toolbar = ConditionalContainer(
-            content=Window(
-                content=FormattedTextControl(lambda: self.error_message),
-                height=1,
-                style="class:error,fg:#ff0000",
-            ),
-            filter=Condition(lambda: self.error_message != ""),
-        )
-
         # Shortcut panel (always visible, content changes based on state)
-        self.shortcut_panel = Window(
+        self.shortcuts = Window(
             content=FormattedTextControl(self.get_shortcuts),
-            height=3,
+            height=2,
             wrap_lines=True,
         )
-
+        self.error_toolbar = ConditionalContainer(
+            content=ValidationToolbar(),
+            filter=Condition(lambda: self.state is State.PREINPUT),
+        )
         # Main layout - cleaner conditional structure
         self.main = HSplit(
             [
                 self.header,
-                self.separator,
                 self.course_list,
                 self.separator,
                 # Time input OR status/log sections (mutually exclusive)
@@ -185,8 +177,8 @@ class ScheduleView(View):
                 self.status_panel,  # Only shown when scheduled
                 self.separator,
                 self.log_panel,  # Only shown when scheduled and has logs
+                self.shortcuts,
                 self.error_toolbar,
-                self.shortcut_panel,
             ]
         )
 
@@ -210,11 +202,6 @@ class ScheduleView(View):
                 self.cancel()
 
         return kb
-
-    def set_courses(self, courses: list[Course]):
-        """Set the courses to be scheduled for election."""
-        self.courses = courses
-        logger.info(f"📚 Loaded {len(courses)} courses for scheduling")
 
     def get_header(self):
         """Generate the header panel."""
@@ -326,7 +313,7 @@ class ScheduleView(View):
         else:
             controls = "• [bold red]Ctrl+C[/bold red]: Exit  • [bold cyan]Enter[/bold cyan]: Schedule"
 
-        return self.get_rich_content(Text.from_markup(controls, justify="center"))
+        return self.get_rich_content(Text.from_markup(controls))
 
     def handle_time_input(self, buffer: Buffer) -> bool:
         """Handle time input and schedule the election with enhanced validation."""
@@ -343,7 +330,6 @@ class ScheduleView(View):
                 logger.info(f"⚠️ Time {time_str} is past today, scheduling for tomorrow")
 
             # Manage state
-            self.error_message = ""
             self.target_datetime = target_datetime
             self.state = State.POSTINPUT
 
@@ -359,9 +345,13 @@ class ScheduleView(View):
             # Clear the input buffer to prevent it from staying visible
             buffer.text = ""
             return True
-        except Exception as e:
-            self.error_message = f"Error scheduling election: {str(e)}"
+        except Exception:
             return False
+
+    def set_courses(self, courses: list[Course]):
+        """Set the courses to be scheduled for election."""
+        self.courses = courses
+        logger.info(f"📚 Loaded {len(courses)} courses for scheduling")
 
     def execute_election(self):
         """Execute the course election process."""
@@ -373,7 +363,6 @@ class ScheduleView(View):
         """Cancel the current scheduling and return to input mode."""
         schedule.clear()
         self.target_datetime = None
-        self.error_message = ""
         logger.info("❌ Scheduling cancelled - returning to input mode")
 
         self.layout.focus(self.time_input_section)

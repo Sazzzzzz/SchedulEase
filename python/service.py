@@ -4,6 +4,7 @@ Core service for interacting with the EAMIS backend.
 from __future__ import annotations
 
 import enum
+import logging
 import random
 import re
 from collections import OrderedDict
@@ -68,6 +69,7 @@ class Profile(NamedTuple):
 
 CourseInfo: TypeAlias = dict[str, Any]
 
+logger = logging.getLogger(__name__)
 
 class EamisService:
     # ---- Utilities ----
@@ -116,7 +118,9 @@ class EamisService:
         try:
             response = self.client.get(EAMIS_URL, follow_redirects=False)
             response.raise_for_status()
+            logger.info("Successfully connected to EAMIS service.")
         except Exception as e:
+            logger.error(f"Failed to connect to EAMIS service: {e}")
             raise ConnectionError(f"Failed to connect to EAMIS service: {e}") from e
         self.client.headers["Sec-Fetch-Site"] = "same-origin"
 

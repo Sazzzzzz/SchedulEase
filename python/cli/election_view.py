@@ -18,6 +18,8 @@ from prompt_toolkit.layout.containers import (
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.menus import CompletionsMenu
+from prompt_toolkit.validation import ValidationError, Validator
+from prompt_toolkit.widgets import ValidationToolbar
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
@@ -59,6 +61,25 @@ class CourseCompleter(Completer):
                     display_meta=course.meta_string,
                 )
 
+class CourseValidator(Validator):
+    def __init__(self, service: EamisService):
+        self.service = service
+
+    def validate(self, document) -> None:
+        """
+        Validates the course input against the service.
+        Raises ValidationError if the course is not found.
+        """
+        query = document.text.strip()
+        if not query:
+            raise ValidationError(message="课程名称不能为空！")
+
+        try:
+            Course.from_input(query, self.service)
+        except ValueError:
+            raise ValidationError(
+                message="输入格式有误！请从课程列表中选择正确的课程名称。"
+            )
 
 # TODO: fix the bug related to string Course id
 class Curriculum:
@@ -110,6 +131,7 @@ class Curriculum:
 # TUI implementation
 class ElectionView(View):
     """Election Interface"""
+
     def __init__(self, service: EamisService) -> None:
         super().__init__()
         # Backend service
@@ -121,19 +143,22 @@ class ElectionView(View):
             complete_while_typing=True,
             accept_handler=self.add_course,
             multiline=False,
+            validator=CourseValidator(service),
+            validate_while_typing=True,
         )
 
         # Widgets
-        self.focus_index = 0
         self.kb = self.get_local_kb()
-        self.error_message = ""
         self.table = Window(
             content=FormattedTextControl(self.get_curriculum_table, focusable=False),
             wrap_lines=True,
         )
-        self.election_list = Window(
-            content=FormattedTextControl(self.get_election_list),
-            wrap_lines=True,
+        self.election_list = ConditionalContainer(
+            Window(
+                content=FormattedTextControl(self.get_election_list, focusable=True),
+                wrap_lines=True,
+            ),
+            filter=Condition(lambda: len(self.curriculum.courses) > 0),
         )
         self.input_panel = VSplit(
             [
@@ -147,28 +172,34 @@ class ElectionView(View):
                 Window(content=BufferControl(buffer=self.input)),
             ]
         )
-        self.error_toolbar = ConditionalContainer(
-            content=Window(
-                content=FormattedTextControl(lambda: self.error_message),
-                height=1,
-                style="class:validation-error,bg:#ff0000, bg:#ffffff",
+        self.error_toolbar = ValidationToolbar()
+        self.conditional_separator = ConditionalContainer(
+            self.separator,
+            filter=Condition(lambda: len(self.curriculum.courses) > 0),
+        )
+        self.prompt = Window(
+            height=6,
+            content=FormattedTextControl(self.get_prompt),
+        )
+        self.shortcuts = Window(
+            height=2,
+            content=FormattedTextControl(
+                text=self.get_rich_content(
+                    Text.from_markup(
+                        "• [bold red]Ctrl+X[/bold red]: 删除课程  • [bold cyan]Left/Right[/bold cyan]: 切换选中课程  • [bold green]Ctrl+C[/bold green]: 退出程序",
+                    )
+                ),
             ),
-            filter=Condition(lambda: self.error_message != ""),
         )
         self.main = HSplit(
             [
                 self.table,
                 self.separator,
                 self.election_list,
-                self.separator,
-                Window(
-                    height=1,
-                    content=FormattedTextControl(
-                        text="Please enter a course name or teacher: ",
-                        style="orange",
-                    ),
-                ),
+                self.conditional_separator,
+                self.prompt,
                 self.input_panel,
+                self.shortcuts,
                 self.error_toolbar,
             ]
         )
@@ -187,6 +218,7 @@ class ElectionView(View):
                 key_bindings=self.kb,
             )
         )
+        self.focus_index = 0
 
     def get_local_kb(self) -> KeyBindings:
         kb = KeyBindings()
@@ -194,14 +226,12 @@ class ElectionView(View):
         @kb.add("left")
         def _(event):
             self.focus_index -= 1
-            self.focus_index %= len(self.curriculum.courses) + 1
 
         @kb.add("right")
         def _(event):
             self.focus_index += 1
-            self.focus_index %= len(self.curriculum.courses) + 1
 
-        @kb.add("c-o")
+        @kb.add("c-x")
         def _(event):
             if self.focus_index == 0:
                 return None
@@ -210,29 +240,10 @@ class ElectionView(View):
 
         return kb
 
-    def update_focus(self, index: int):
-        if index == 0:
-            self.layout.focus(self.input)
-        else:
-            self.layout.focus(self.election_list)
-
-    def add_course(self, buffer: Buffer) -> bool:
-        """Adds a course to the curriculum based on user input."""
-        try:
-            course = Course.from_input(buffer.text, self.service)
-        except ValueError:
-            self.error_message = "输入格式有误！请确保从课程列表中选择正确的课程名称。"
-            return False
-        self.error_message = ""
-        return not self.curriculum.add_course(course)
-
     def get_curriculum_table(self, classes: int = 14) -> ANSI:
-        # TODO: cleaner logic
-        # Current logic is generated by AI
         """
-        Displays a curriculum table based on schedule data.
+        Displays a curriculum table with 2-line rows showing course names and locations/conflicts.
         """
-
         table = Table(
             title="[bold cyan]Weekly Curriculum[/bold cyan]",
             show_header=True,
@@ -240,53 +251,60 @@ class ElectionView(View):
         )
 
         # Define columns
-        table.add_column("Classes", style="dim")
+        table.add_column("Classes", style="italic", justify="center")
         weekdays_list = list(Weekdays)
         for day in weekdays_list:
             table.add_column(day.value, justify="center")
 
-        # Populate rows
-        # 1. Create a grid to hold schedule data
+        # Create schedule grid to hold course lists for each time slot
         schedule_grid = {
-            period: {day: "" for day in weekdays_list}
+            period: {day: [] for day in weekdays_list}
             for period in range(1, classes + 1)
         }
 
-        # 2. Fill the grid with course information
+        # Populate schedule grid with courses
         for course in self.curriculum.courses:
             for weekday, duration in course.duration.items():
                 for period in range(duration.start, duration.end + 1):
                     if period in schedule_grid:
-                        # Handle potential conflicts by appending names
-                        if schedule_grid[period][weekday]:
-                            schedule_grid[period][weekday] += (
-                                f"\n[red]{course.name}[/red]"
-                            )
-                        else:
-                            schedule_grid[period][weekday] = course.name
+                        schedule_grid[period][weekday].append(course)
 
-        # 3. Add rows to the rich table from the grid
+        # Build table rows with 2-line format
         for period in range(1, classes + 1):
             row_data = [f"Class {period}"]
-            for day in weekdays_list:
-                row_data.append(schedule_grid[period][day])
+
+            for weekday in weekdays_list:
+                courses_in_slot: list[Course] = schedule_grid[period][weekday]
+
+                if not courses_in_slot:
+                    # Empty slot - add empty 2-line cell
+                    cell_content = "\n"
+                elif len(courses_in_slot) == 1:
+                    # Single course - show name on first line, location on second line
+                    course = courses_in_slot[0]
+                    cell_content = f"{course.name}\n"
+                else:
+                    # Multiple courses (conflict) - show first course name on first line,
+                    # second course name in red on second line
+                    main_course = courses_in_slot[0]
+                    conflict_course = courses_in_slot[1]
+                    cell_content = (
+                        f"{main_course.name}\n[red]{conflict_course.name}[/red]"
+                    )
+
+                row_data.append(cell_content)
+
             table.add_row(*row_data)
 
         return self.get_rich_content(table)
 
-    def get_election_list(self) -> ANSI:
-        """Display selected courses summary, conflicts, and commands."""
-        renderables = []
-        # Display commands
-        command_text = Text.from_markup(
-            """\
+    def get_prompt(self) -> ANSI:
+        message = """\
 • 输入课程/老师名称添加课程
-• 使用左右方向键选中已选课程
-• 使用 Ctrl+O 删除选中课程"""
-        )
-        renderables.append(
+• 程序将自动进行冲突检测，无需提前排除冲突课程"""
+        return self.get_rich_content(
             Panel(
-                command_text,
+                Text.from_markup(message),
                 title="[bold cyan]Commands[/bold cyan]",
                 border_style="cyan",
                 padding=(1, 2),
@@ -294,9 +312,10 @@ class ElectionView(View):
             )
         )
 
-        # Display selected courses if any
-        if not self.curriculum.courses:
-            return self.get_rich_content(Group(*renderables))
+    def get_election_list(self) -> ANSI:
+        """Display selected courses summary, conflicts, and commands."""
+        renderables = []
+
         renderables.append(Text("Selected Courses:", style="bold green"))
         for i, course in enumerate(self.curriculum.courses, 1):
             if i == self.focus_index:
@@ -352,6 +371,30 @@ class ElectionView(View):
 
         return self.get_rich_content(Group(*renderables))
 
+    def update_focus(self, index: int):
+        if index == 0:
+            self.layout.focus(self.input)
+        else:
+            self.layout.focus(self.election_list)
+
+    @property
+    def focus_index(self) -> int:
+        """Get the current focus index.
+
+        focus_index = 0: input field
+        focus_index > 0: election list, index corresponds to the course in the list"""
+        return self._focus_index
+
+    @focus_index.setter
+    def focus_index(self, value: int) -> None:
+        self._focus_index = value % (len(self.curriculum.courses) + 1)
+        self.update_focus(self._focus_index)
+
+    def add_course(self, buffer: Buffer) -> bool:
+        """Adds a course to the curriculum based on user input."""
+        course = Course.from_input(buffer.text, self.service)
+        return not self.curriculum.add_course(course)
+
 
 if __name__ == "__main__":
     # This module is only responsible for certain views, not for running the application.
@@ -369,5 +412,9 @@ if __name__ == "__main__":
         event.app.exit()
 
     view = ElectionView(DummyEamisService())
-    app = Application(layout=view.layout, full_screen=True, key_bindings=kb)
+    app = Application(
+        layout=view.layout,
+        full_screen=True,
+        key_bindings=kb,
+    )
     app.run()
