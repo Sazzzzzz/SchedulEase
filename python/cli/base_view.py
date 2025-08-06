@@ -33,6 +33,7 @@ class View(ABC):
         A utility function to render rich content to a string buffer.
         """
         # TODO: Add function signature from `rich.print` using ParamSpec and TypeVar
+        # TODO: Generalize this function to accept custom console and stream
         self.console.print(*args, **kwargs)
         output = self.io.getvalue()
         self.io.seek(0)
