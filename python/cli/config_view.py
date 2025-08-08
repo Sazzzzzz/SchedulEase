@@ -1,5 +1,5 @@
 """
-CLI for creating and editing configurations.
+View object responsible for creating and editing configurations.
 """
 
 import enum

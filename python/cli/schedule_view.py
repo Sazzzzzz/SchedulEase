@@ -1,10 +1,16 @@
+"""
+View object responsible for schedule election time
+"""
+
+# TODO: log too long
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum, auto
 from typing import Optional
 
 import schedule
-from prompt_toolkit import ANSI, HTML
+from prompt_toolkit import ANSI
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -55,6 +61,7 @@ class LoggerMixin(View):
 class State(Enum):
     PREINPUT = auto()
     POSTINPUT = auto()
+    RUNNING = auto()
 
 
 class TimeValidator(Validator):
@@ -63,12 +70,12 @@ class TimeValidator(Validator):
     def validate(self, document):
         text = document.text.strip()
         if not text:
-            raise ValidationError(message="Time cannot be empty")
+            raise ValidationError(message="输入不可为空")
         try:
             datetime.strptime(text, "%H:%M")
         except ValueError:
             raise ValidationError(
-                message="Invalid time format. Please use HH:MM (24-hour format, e.g., 14:30, 08:00)"
+                message="时间格式有误。请使用24 小时制时间格式 HH:MM（如 14:30，08:00）"
             )
 
 
@@ -81,9 +88,10 @@ class ScheduleView(View):
         self.logger = LoggerMixin()
 
         # State management
-        self.state = State.PREINPUT
+        self._state = State.PREINPUT
         self.courses: list[Course] = []
-        self.target_time: Optional[datetime] = None
+        self.target_datetime: Optional[datetime] = None
+        self._refresh_task: Optional[asyncio.Task] = None
 
         # Input buffer for time entry
         self.time_buffer = Buffer(
@@ -110,19 +118,13 @@ class ScheduleView(View):
         )
 
         # Time input section (only visible when not scheduled)
-        self.time_input_section = ConditionalContainer(
+        self.time_input = ConditionalContainer(
             content=HSplit(
                 [
                     Window(
                         content=FormattedTextControl(self.get_time_instructions),
                         wrap_lines=True,
                         height=4,
-                    ),
-                    Window(
-                        content=FormattedTextControl(
-                            HTML("<bold><cyan>Enter Time (HH:MM):</cyan></bold>")
-                        ),
-                        height=1,
                     ),
                     VSplit(
                         [
@@ -144,8 +146,9 @@ class ScheduleView(View):
             content=Window(
                 content=FormattedTextControl(self.get_status_panel),
                 wrap_lines=True,
+                height=8,
             ),
-            filter=Condition(lambda: self.state is State.POSTINPUT),
+            filter=Condition(lambda: self.state is not State.PREINPUT),
         )
 
         self.log_panel = ConditionalContainer(
@@ -153,7 +156,7 @@ class ScheduleView(View):
                 content=FormattedTextControl(self.get_log_panel),
                 wrap_lines=True,
             ),
-            filter=Condition(lambda: self.state is State.POSTINPUT),
+            filter=Condition(lambda: self.state is not State.PREINPUT),
         )
 
         # Shortcut panel (always visible, content changes based on state)
@@ -173,16 +176,44 @@ class ScheduleView(View):
                 self.course_list,
                 self.separator,
                 # Time input OR status/log sections (mutually exclusive)
-                self.time_input_section,  # Only shown when not scheduled
+                self.time_input,  # Only shown when not scheduled
                 self.status_panel,  # Only shown when scheduled
-                self.separator,
+                # self.separator,
                 self.log_panel,  # Only shown when scheduled and has logs
                 self.shortcuts,
                 self.error_toolbar,
-            ]
+            ],
+            key_bindings=self.kb,
         )
 
-        self.layout = Layout(self.main, focused_element=self.time_input_section)
+        self.layout = Layout(self.main, focused_element=self.time_input)
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value: State):
+        """
+        Descriptor to set states. Used to manage refresh task automatically.
+        """
+        # from PREINPUT to POSTINPUT, common scenerio
+        # from POSTINPUT to RUNNING, common scenerio
+        # from POSTINPUT to PREINPUT, happens when user cancels the election
+        # from PREINPUT to RUNNING, happens when manual election is triggered
+        # other cases, raise an error
+        match (self._state, value):
+            case (State.PREINPUT, State.POSTINPUT):
+                self._start_refresh()
+            case (State.POSTINPUT, State.RUNNING):
+                pass
+            case (State.POSTINPUT, State.PREINPUT):
+                self._stop_refresh()
+            case (State.PREINPUT, State.RUNNING):
+                self._start_refresh()
+            case _:
+                raise ValueError(f"Invalid state transition: {self._state} -> {value}")
+        self._state = value
 
     def get_local_kb(self) -> KeyBindings:
         """Define local key bindings for the view."""
@@ -191,9 +222,9 @@ class ScheduleView(View):
         @kb.add("c-s")
         def _(event: KeyPressEvent):
             """Simulate scheduled execution for testing."""
-            if self.state is State.POSTINPUT:
+            if self.state is not State.RUNNING:
                 logger.info("🧪 [TEST] Simulating scheduled execution...")
-                self.execute_election()
+                self.execute_election_background()
 
         @kb.add("c-x")
         def _(event: KeyPressEvent):
@@ -206,9 +237,7 @@ class ScheduleView(View):
     def get_header(self):
         """Generate the header panel."""
         title = Text("Course Election Scheduler", style="bold cyan", justify="center")
-        subtitle = Text(
-            "Schedule automatic course elections", style="dim", justify="center"
-        )
+        subtitle = Text("定时选课界面", style="dim", justify="center")
         panel = Panel(
             Group(title, subtitle),
             border_style="cyan",
@@ -222,24 +251,17 @@ class ScheduleView(View):
             title=f"Courses to Schedule ({len(self.courses)})", show_header=True
         )
         table.add_column("No.", style="dim", width=4)
+        table.add_column("Code", style="yellow", width=20)
         table.add_column("Course Name", style="cyan")
         table.add_column("Teachers", style="green")
-        table.add_column("Schedule", style="yellow", width=20)
 
         for i, course in enumerate(self.courses, 1):
             # Create a simple course overview
-            # TODO: Add stripping for long names/schedule
-            schedule_str = ", ".join(
-                [
-                    f"{day.name}: {duration.start}-{duration.end}"
-                    for day, duration in course.duration.items()
-                ]
-            )
             table.add_row(
                 str(i),
+                course.code,
                 course.name,
                 ", ".join(course.teachers),
-                schedule_str,
             )
 
         return self.get_rich_content(table)
@@ -247,9 +269,11 @@ class ScheduleView(View):
     def get_time_instructions(self):
         """Generate time input instructions."""
         instructions = [
-            "• Enter the time when course election should start",
-            "• Use 24-hour format (HH:MM), e.g., 14:30, 08:00",
-            "• If the time is in the past today, it will be scheduled for tomorrow",
+            "[bold cyan] 请输入计划选课的时间 [/bold cyan]",
+            "• 使用24小时制 (HH:MM)，例如：14:30，08:00",
+            "• 如果该时间点已经过去，将安排于明天",
+            "• Ctrl+S 将立刻向服务器发送选课请求",
+            # TODO: add color
         ]
 
         text = Text()
@@ -259,36 +283,30 @@ class ScheduleView(View):
 
     def get_status_panel(self):
         """Display current scheduling status."""
-        if self.state is State.PREINPUT:
-            return self.get_rich_content(Text(""))
-
         now = datetime.now()
-        assert self.target_datetime is not None, "Target datetime should be set"
-        time_remaining = self.target_datetime - now
-        if time_remaining.total_seconds() > 0:
-            hours, remainder = divmod(int(time_remaining.total_seconds()), 3600)
+        if self.target_datetime is None:
+            status = "✅ Election has been scheduled"
+            remaining = "🎯 Manual Test has happened"
+            status_color = "yellow"
+        elif (
+            sec := (self.target_datetime - now).total_seconds()
+        ) > 0 and self.state is State.POSTINPUT:
+            hours, remainder = divmod(int(sec), 3600)
             minutes, seconds = divmod(remainder, 60)
             countdown = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
             status = f"⏰ Election scheduled for: {self.target_datetime.strftime('%Y-%m-%d %H:%M')}"
             remaining = f"⏳ Time remaining: {countdown}"
             status_color = "green"
-        else:
+        elif sec <= 0:
             status = "✅ Scheduled time has passed"
             remaining = "🎯 Election should have been triggered"
             status_color = "yellow"
+        else:
+            raise RuntimeError("Unknown state")
 
         content = Group(
             Text(status, style=f"bold {status_color}"),
             Text(remaining, style="cyan"),
-            Text(""),
-            Text("Controls:", style="bold"),
-            Text.from_markup(
-                "• Press [bold]Ctrl+S[/bold] to simulate execution (testing)",
-                style="dim",
-            ),
-            Text.from_markup(
-                "• Press [bold]Ctrl+X[/bold] to cancel scheduling", style="dim"
-            ),
         )
 
         panel = Panel(
@@ -307,13 +325,38 @@ class ScheduleView(View):
 
     def get_shortcuts(self) -> ANSI:
         """Display control instructions."""
-        if self.state is State.PREINPUT:
-            # Add "enter"
-            controls = "• [bold red]Ctrl+C[/bold red]: Exit  • [bold yellow]Ctrl+X[/bold yellow]: Cancel  • [bold green]Ctrl+S[/bold green]: Test"
-        else:
-            controls = "• [bold red]Ctrl+C[/bold red]: Exit  • [bold cyan]Enter[/bold cyan]: Schedule"
+        match self.state:
+            case State.PREINPUT:
+                controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold green]Ctrl+S[/bold green]: [bold]立即选课[/bold]"
+            case State.POSTINPUT:
+                controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold green]Ctrl+S[/bold green]: [bold]立即选课[/bold]  • [bold yellow]Ctrl+X[/bold yellow]: [bold]编辑时间[/bold]"
+            case State.RUNNING:
+                controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]"
 
         return self.get_rich_content(Text.from_markup(controls))
+
+    def _start_refresh(self):
+        """Start the auto-refresh page when scheduling begins."""
+        if self._refresh_task is None:
+            self._refresh_task = asyncio.create_task(self._refresh_loop())
+
+    def _stop_refresh(self):
+        """Stop auto-refreshing."""
+        if self._refresh_task is not None:
+            self._refresh_task.cancel()
+            self._refresh_task = None
+
+    async def _refresh_loop(self):
+        """Refresh the UI and check schedule."""
+        try:
+            while True:
+                # Check for scheduled jobs and update UI
+                schedule.run_pending()
+                app.invalidate()
+
+                await asyncio.sleep(0.5)  # refresh every 0.5 sec
+        except asyncio.CancelledError:
+            pass
 
     def handle_time_input(self, buffer: Buffer) -> bool:
         """Handle time input and schedule the election with enhanced validation."""
@@ -334,16 +377,13 @@ class ScheduleView(View):
             self.state = State.POSTINPUT
 
             # Schedule the job
-            schedule.every().day.at(time_str).do(self.execute_election).tag("election")
-
-            # Add confirmation messages
+            schedule.every().day.at(time_str).do(self.execute_election_background).tag(
+                "election"
+            )
             logger.info(
                 f"✅ Election scheduled for {target_datetime.strftime('%Y-%m-%d %H:%M')}"
             )
             logger.info(f"📋 {len(self.courses)} courses will be processed")
-
-            # Clear the input buffer to prevent it from staying visible
-            buffer.text = ""
             return True
         except Exception:
             return False
@@ -353,19 +393,42 @@ class ScheduleView(View):
         self.courses = courses
         logger.info(f"📚 Loaded {len(courses)} courses for scheduling")
 
-    def execute_election(self):
-        """Execute the course election process."""
-        logger.info("🚀 Starting course election process...")
-        self.service.elect_courses(self.courses)
-        logger.info("🎉 Course election completed!")
-
     def cancel(self):
         """Cancel the current scheduling and return to input mode."""
         schedule.clear()
         self.target_datetime = None
+        self.state = State.PREINPUT
         logger.info("❌ Scheduling cancelled - returning to input mode")
+        self.layout.focus(self.time_input)
 
-        self.layout.focus(self.time_input_section)
+    def execute_election_background(self):
+        """
+        Non-blocking wrapper scheduled by `schedule`.
+        """
+        if self.state is State.RUNNING:
+            logger.warning("Election already in progress.")
+            return None
+        logger.debug("🚀 Starting course election process...")
+        self.state = State.RUNNING
+        self._election_spawned = True
+        asyncio.create_task(self._execute_election_async())
+
+    async def _execute_election_async(self):
+        """turn the election job into async function
+
+        implementing the "fire and forget" mechanism"""
+        logger.debug("🚀 Starting course election process (async)...")
+        # Run blocking sync code in a thread
+        await asyncio.to_thread(self.service.elect_courses, self.courses)
+        logger.debug("🎉 Course election completed!")
+        schedule.clear("election")
+
+    def execute_election(self):
+        """Execute the course election process."""
+        logger.info("🚀 Starting course election process...")
+        self.service.elect_courses(self.courses)
+        schedule.clear("election")
+        logger.info("🎉 Course election completed!")
 
 
 # --- Main Application Logic ---
@@ -376,8 +439,8 @@ if __name__ == "__main__":
 
     service = DummyEamisService()
     test_courses = [
-        Course.from_row(row, service) for row in service.course_info.head(2).to_dicts()
-    ]  # Take first 2 courses
+        Course.from_row(row, service) for row in service.course_info.head(5).to_dicts()
+    ]  # Take some rows
     view = ScheduleView(service)
     view.set_courses(test_courses)  # Set courses for scheduling
 

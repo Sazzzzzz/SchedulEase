@@ -1,3 +1,7 @@
+"""
+View object responsible for displaying and managing the course election process.
+"""
+
 import re
 from itertools import combinations
 from typing import Any, Generator, Optional
@@ -186,7 +190,7 @@ class ElectionView(View):
             content=FormattedTextControl(
                 text=self.get_rich_content(
                     Text.from_markup(
-                        "• [bold red]Ctrl+X[/bold red]: 删除课程  • [bold cyan]Left/Right[/bold cyan]: 切换选中课程  • [bold green]Ctrl+C[/bold green]: 退出程序",
+                        "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Ctrl+X[/bold green]: [bold]删除课程[/bold]",
                     )
                 ),
             ),
