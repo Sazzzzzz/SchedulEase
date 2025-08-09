@@ -5,10 +5,11 @@ View object responsible for creating and editing configurations.
 import enum
 from enum import auto
 from typing import Optional
+
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.formatted_text import ANSI
-from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.layout import (
     BufferControl,
     ConditionalContainer,
@@ -19,14 +20,15 @@ from prompt_toolkit.layout import (
 )
 from prompt_toolkit.layout.containers import HSplit
 from prompt_toolkit.layout.processors import PasswordProcessor
-from prompt_toolkit.validation import Validator, ValidationError
+from prompt_toolkit.validation import ValidationError, Validator
+from prompt_toolkit.widgets.toolbars import ValidationToolbar
 from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
 from python.cli.base_view import View
+from python.config import CONFIG_PATH, create_config, load_config
 from python.service import EamisService
-from python.config import load_config, create_config
 
 
 class State(enum.Enum):
@@ -47,14 +49,16 @@ class PasswordValidator(Validator):
     def validate(self, document):
         if self.password is None:
             return
-        if document.text != self.password:
-            raise ValidationError(message="Passwords do not match!")
+        if len(document.text) < len(self.password):
+            raise ValidationError(message="⚠ Password is too short")
+        elif document.text != self.password:
+            raise ValidationError(message="✗ Passwords do not match")
 
 
 class ConfigView(View):
     """Configuration Interface for account setup"""
 
-    def __init__(self, service: EamisService):
+    def __init__(self, service: EamisService) -> None:
         super().__init__()
         self.service = service
 
@@ -62,8 +66,6 @@ class ConfigView(View):
         self.state: State = State.ACCOUNT
         self.account: str = ""
         self.password: str = ""
-        self.error_message: str = ""
-        self.success_message: str = ""
 
         # Input buffers
         self.account_buffer = Buffer(
@@ -80,6 +82,7 @@ class ConfigView(View):
             accept_handler=self.handle_confirm_input,
             multiline=False,
             validate_while_typing=True,
+            validator=PasswordValidator(),
         )
 
         # Key bindings
@@ -88,7 +91,7 @@ class ConfigView(View):
         # UI Components
         self.header = Window(
             content=FormattedTextControl(self.get_header),
-            height=5,
+            height=7,
             wrap_lines=True,
         )
 
@@ -149,7 +152,11 @@ class ConfigView(View):
                 ),
             ]
         )
-
+        self.shortcuts = Window(
+            content=FormattedTextControl(self.get_shortcuts),
+            height=2,
+            wrap_lines=True,
+        )
         # Conditional containers for each input
         self.account_field = ConditionalContainer(
             content=self.account_input,
@@ -166,14 +173,7 @@ class ConfigView(View):
             filter=Condition(lambda: self.state is State.CONFIRM),
         )
 
-        self.error_toolbar = ConditionalContainer(
-            content=Window(
-                content=FormattedTextControl(lambda: self.error_message),
-                height=1,
-                style="class:error,fg:#ff0000",
-            ),
-            filter=Condition(lambda: self.error_message != ""),
-        )
+        self.error_toolbar = ValidationToolbar()
 
         self.success_panel = ConditionalContainer(
             content=Window(
@@ -181,16 +181,6 @@ class ConfigView(View):
                 wrap_lines=True,
             ),
             filter=Condition(lambda: self.state is State.COMPLETE),
-        )
-
-        self.password_match_indicator = ConditionalContainer(
-            content=Window(
-                content=FormattedTextControl(self.get_password_match_status),
-                height=1,
-            ),
-            filter=Condition(
-                lambda: self.state is State.CONFIRM and bool(self.confirm_buffer.text)
-            ),
         )
 
         # Main layout
@@ -204,9 +194,9 @@ class ConfigView(View):
                 self.account_field,
                 self.password_field,
                 self.confirm_field,
-                self.password_match_indicator,
-                self.error_toolbar,
                 self.success_panel,
+                self.shortcuts,
+                self.error_toolbar,
             ]
         )
 
@@ -215,26 +205,7 @@ class ConfigView(View):
     def get_local_kb(self) -> KeyBindings:
         """Define local key bindings for the view."""
         kb = KeyBindings()
-
-        @kb.add("c-c")
-        def _(event):
-            """Cancel and return to previous view."""
-            # In a real app, this would navigate back
-            event.app.exit()
-
-        @kb.add("escape")
-        def _(event):
-            """Go back to previous step."""
-            if self.state is State.PASSWORD:
-                self.state = State.ACCOUNT
-                self.password_buffer.reset()
-                self.error_message = ""
-                self.layout.focus(self.account_input)
-            elif self.state is State.CONFIRM:
-                self.state = State.PASSWORD
-                self.confirm_buffer.reset()
-                self.error_message = ""
-                self.layout.focus(self.password_input)
+        # placeholder for future shortcuts
 
         return kb
 
@@ -252,9 +223,7 @@ class ConfigView(View):
         title = Text(
             "Course Election Configuration", style="bold cyan", justify="center"
         )
-        subtitle = Text(
-            "Set up your account credentials", style="dim", justify="center"
-        )
+        subtitle = Text("编辑账号与密码", style="dim", justify="center")
 
         panel = Panel(
             Group(title, subtitle),
@@ -268,25 +237,21 @@ class ConfigView(View):
         # TODO: Rewrite this in `Group` for better formatting
         instructions = {
             State.ACCOUNT: [
-                "• Enter your student ID or account name",
-                "• Press [bold cyan]Enter[/bold cyan] to continue",
-                "• Press [bold red]Ctrl+C[/bold red] to cancel",
+                "• [bold yellow]请输入学号[/bold yellow]",
             ],
             State.PASSWORD: [
-                "• Enter your password (hidden for security)",
-                "• Press [bold cyan]Enter[/bold cyan] to continue",
-                "• Press [bold yellow]Escape[/bold yellow] to go back",
+                "• [bold yellow]请输入密码（密码将被隐藏）[/bold yellow]",
+                "• 系统仅保存加密后的密码",
+                "• 密文与原密码功能相同，请勿泄露配置文件",
             ],
             State.CONFIRM: [
-                "• Re-enter your password to confirm",
-                "• Passwords must match exactly",
-                "• Press [bold cyan]Enter[/bold cyan] to save configuration",
-                "• Press [bold yellow]Escape[/bold yellow] to go back",
+                "• [bold yellow]请再次输入密码以确认[/bold yellow]",
+                "• 密码必须完全匹配",
             ],
             State.COMPLETE: [
-                "✓ Configuration saved successfully!",
-                "• Your credentials have been securely stored",
-                "• You can now proceed to course election",
+                "[bold green]✓ 配置已成功保存！[/bold green]",
+                f"• 其余设置可在配置文件[italic cyan]{CONFIG_PATH}[/italic cyan]中手动编辑",
+                "• 您现在可以继续选课",
             ],
         }
 
@@ -309,30 +274,17 @@ class ConfigView(View):
         label = labels.get(self.state, "")
         return self.get_rich_content(Text.from_markup(label))
 
-    def get_password_match_status(self) -> ANSI:
-        """Show real-time password matching status."""
-        if not self.confirm_buffer.text:
-            return ANSI("")
-
-        if self.confirm_buffer.text == self.password:
-            status = Text("✓ Passwords match", style="green bold")
-        else:
-            if len(self.confirm_buffer.text) < len(self.password):
-                status = Text("⚠ Password is too short", style="yellow")
-            else:
-                status = Text("✗ Passwords do not match", style="red bold")
-
-        return self.get_rich_content(status)
-
     def get_success_panel(self) -> ANSI:
-        """Generate the success panel after configuration is complete."""
+        """Generate the success panel after configuration is complete.
+
+        This looks really good : )"""
         content = Group(
             Text("Configuration Complete!", style="bold green", justify="center"),
             Text(""),
             Text(f"Account: {self.account}", style="cyan"),
             Text("Password: " + "•" * len(self.password), style="cyan"),
             Text(""),
-            Text("Your configuration has been saved.", style="dim", justify="center"),
+            Text("已成功保存您的账号与密码！", justify="center"),
         )
 
         panel = Panel(
@@ -344,16 +296,18 @@ class ConfigView(View):
 
         return self.get_rich_content(panel)
 
+    def get_shortcuts(self) -> ANSI:
+        return self.get_rich_content(
+            Text.from_markup(
+                "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold] • [bold cyan]Enter[/bold cyan]: [bold]下一步[/bold]"
+            )
+        )
+
     def handle_account_input(self, buffer: Buffer) -> bool:
         """Handle account name input."""
         account = buffer.text.strip()
-        if not account:
-            self.error_message = "Account name cannot be empty!"
-            return False
-
         self.account = account
         self.state = State.PASSWORD
-        self.error_message = ""
         self.layout.focus(self.password_input)
         return False  # Don't close the buffer
 
@@ -361,29 +315,20 @@ class ConfigView(View):
         """Handle password input."""
         password = buffer.text
         if not password:
-            self.error_message = "Password cannot be empty!"
             return False
 
         self.password = password
         self.confirm_buffer.validator = PasswordValidator(password)
         self.state = State.CONFIRM
-        self.error_message = ""
         self.layout.focus(self.confirm_input)
         return False
 
     def handle_confirm_input(self, buffer: Buffer) -> bool:
-        """Handle password confirmation."""
-        if buffer.text != self.password:
-            self.error_message = "Passwords do not match! Please try again."
-            return False
-
+        """Handle (already validated) password confirmation."""
         try:
             create_config(self.account, self.password)
             self.state = State.COMPLETE
-            self.error_message = ""
-            self.success_message = "Configuration saved successfully!"
-        except Exception as e:
-            self.error_message = f"Failed to save configuration: {str(e)}"
+        except Exception:
             return False
 
         return False
@@ -393,7 +338,6 @@ if __name__ == "__main__":
     # This module is only responsible for certain views, not for running the application.
     # Following lines are for testing purposes only.
     from prompt_toolkit import Application
-    from prompt_toolkit.key_binding import KeyPressEvent
 
     from python.tests.dummy_service import DummyEamisService
 
