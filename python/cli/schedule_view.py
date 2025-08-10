@@ -31,9 +31,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from python.cli.base_view import View
-from python.service import EamisService
-from python.shared import Course
+from .base_view import View
+from ..service import EamisService
+from ..shared import Course
 
 logger = logging.getLogger(__name__)
 
@@ -435,7 +435,7 @@ class ScheduleView(View):
 if __name__ == "__main__":
     from prompt_toolkit import Application
 
-    from python.tests.dummy_service import DummyEamisService
+    from ..tests.dummy_service import DummyEamisService
 
     service = DummyEamisService()
     test_courses = [

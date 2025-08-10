@@ -28,8 +28,8 @@ import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
-from python.config import load_config
-from python.shared import Course
+from .config import load_config
+from .shared import Course
 
 # API URLs
 LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")
@@ -546,16 +546,16 @@ if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
     # service.course_info
-    # import json
+    import json
 
-    # test_profile = Profile(
-    #     title="TestProfile",
-    #     url=httpx.URL("https://eamis.nankai.edu.cn/fake_profile"),
-    #     id="1234",
-    # )
-    # with open("test.json", "r", encoding="utf-8") as f:
-    #     data = json.load(f)
-    # df = EamisService.create_dataframe(
-    #     EamisService.process_raw_data(data, test_profile)
-    # )
-    # df.write_json("data/output.json")
+    test_profile = Profile(
+        title="TestProfile",
+        url=httpx.URL("https://eamis.nankai.edu.cn/fake_profile"),
+        id="1234",
+    )
+    with open("test.json", "x", encoding="utf-8") as f:
+        data = json.load(f)
+    df = EamisService.create_dataframe(
+        EamisService.process_raw_data(data, test_profile)
+    )
+    df.write_json("data/output.json")

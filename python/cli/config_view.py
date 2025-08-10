@@ -26,9 +26,9 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from python.cli.base_view import View
-from python.config import CONFIG_PATH, create_config, load_config
-from python.service import EamisService
+from .base_view import View
+from ..config import CONFIG_PATH, create_config, load_config
+from ..service import EamisService
 
 
 class State(enum.Enum):
@@ -339,7 +339,7 @@ if __name__ == "__main__":
     # Following lines are for testing purposes only.
     from prompt_toolkit import Application
 
-    from python.tests.dummy_service import DummyEamisService
+    from ..tests.dummy_service import DummyEamisService
 
     kb = KeyBindings()
 

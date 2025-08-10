@@ -10,7 +10,7 @@ from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.shortcuts import radiolist_dialog, message_dialog, button_dialog
 
-from cli.config_view import setup_config, load_config
+from cli.config_view import ConfigView
 from cli.election_view import ElectionView
 from cli.schedule_view import ScheduleView
 from python.tests.dummy_service import DummyEamisService

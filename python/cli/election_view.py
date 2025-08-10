@@ -29,9 +29,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from python.cli.base_view import View
-from python.service import EamisService
-from python.shared import Course, Weekdays
+from .base_view import View
+from ..service import EamisService
+from ..shared import Course, Weekdays
 
 
 class CourseCompleter(Completer):
@@ -406,7 +406,7 @@ if __name__ == "__main__":
     from prompt_toolkit import Application
     from prompt_toolkit.key_binding import KeyPressEvent
 
-    from python.tests.dummy_service import DummyEamisService
+    from ..tests.dummy_service import DummyEamisService
 
     kb = KeyBindings()
 
