@@ -50,9 +50,9 @@ class PasswordValidator(Validator):
         if self.password is None:
             return
         if len(document.text) < len(self.password):
-            raise ValidationError(message="⚠ Password is too short")
+            raise ValidationError(message="⚠ 密码太短")
         elif document.text != self.password:
-            raise ValidationError(message="✗ Passwords do not match")
+            raise ValidationError(message="✗ 密码不匹配")
 
 
 class ConfigView(View):

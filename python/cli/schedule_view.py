@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from enum import Enum, auto
 from typing import Optional
 
+from prompt_toolkit.application import get_app
 import schedule
 from prompt_toolkit import ANSI
 from prompt_toolkit.buffer import Buffer
@@ -220,14 +221,14 @@ class ScheduleView(View):
         kb = KeyBindings()
 
         @kb.add("c-s")
-        def _(event: KeyPressEvent):
+        def _c_s(event: KeyPressEvent):
             """Simulate scheduled execution for testing."""
             if self.state is not State.RUNNING:
                 logger.info("🧪 [TEST] Simulating scheduled execution...")
                 self.execute_election_background()
 
         @kb.add("c-x")
-        def _(event: KeyPressEvent):
+        def _c_x(event: KeyPressEvent):
             """Cancel current scheduling."""
             if self.state is State.POSTINPUT:
                 self.cancel()
@@ -352,7 +353,8 @@ class ScheduleView(View):
             while True:
                 # Check for scheduled jobs and update UI
                 schedule.run_pending()
-                app.invalidate()
+                get_app().invalidate()
+                # app.invalidate()
 
                 await asyncio.sleep(0.5)  # refresh every 0.5 sec
         except asyncio.CancelledError:

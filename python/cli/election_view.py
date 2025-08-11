@@ -29,9 +29,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .base_view import View
 from ..service import EamisService
 from ..shared import Course, Weekdays
+from .base_view import View
 
 
 class CourseCompleter(Completer):
@@ -65,6 +65,7 @@ class CourseCompleter(Completer):
                     display_meta=course.meta_string,
                 )
 
+
 class CourseValidator(Validator):
     def __init__(self, service: EamisService):
         self.service = service
@@ -84,6 +85,7 @@ class CourseValidator(Validator):
             raise ValidationError(
                 message="输入格式有误！请从课程列表中选择正确的课程名称。"
             )
+
 
 # TODO: fix the bug related to string Course id
 class Curriculum:
@@ -149,6 +151,7 @@ class ElectionView(View):
             multiline=False,
             validator=CourseValidator(service),
             validate_while_typing=True,
+            enable_history_search=False,
         )
 
         # Widgets
@@ -228,15 +231,15 @@ class ElectionView(View):
         kb = KeyBindings()
 
         @kb.add("left")
-        def _(event):
+        def _left(event):
             self.focus_index -= 1
 
         @kb.add("right")
-        def _(event):
+        def _right(event):
             self.focus_index += 1
 
         @kb.add("c-x")
-        def _(event):
+        def _c_x(event):
             if self.focus_index == 0:
                 return None
             self.curriculum.remove_course(self.curriculum.courses[self.focus_index - 1])
@@ -324,7 +327,7 @@ class ElectionView(View):
         for i, course in enumerate(self.curriculum.courses, 1):
             if i == self.focus_index:
                 line = Text(
-                    f"  {i}. {course.name} - {'; '.join(course.teachers)}",
+                    f" › {i}. {course.name} - {'; '.join(course.teachers)}",
                     style="cyan bold",
                 )
             else:
@@ -343,6 +346,7 @@ class ElectionView(View):
         if not self.curriculum.conflicts:
             return self.get_rich_content(Group(*renderables))
         renderables.append(Text("\nConflicts Detected:", style="bold red"))
+        # TODO: Nasty logic, fix later
         for course_id, conflicting_ids in self.curriculum.conflicts.items():
             course = next(
                 (c for c in self.curriculum.courses if c.id == course_id), None
@@ -358,15 +362,15 @@ class ElectionView(View):
             #         renderables.append(
             #             Text(f"  • {course.name} 与 {conf_course.name} 冲突！")
             #         )
-            if len(conflicting_ids) == 1:
-                conf_id = conflicting_ids.pop()
+            if (num_conflicts := len(conflicting_ids)) == 1:
+                conf_id = next(iter(conflicting_ids))
                 conf_course = next(
                     (c for c in self.curriculum.courses if c.id == conf_id),
                 )
                 renderables.append(
                     Text(f"  • {course.name} 与 {conf_course.name} 冲突！")
                 )
-            else:
+            elif num_conflicts > 1:
                 renderables.append(
                     Text(
                         f"  • {course.name} 与 {', '.join(c.name for c in self.curriculum.courses if c.id in conflicting_ids)} 冲突！"
