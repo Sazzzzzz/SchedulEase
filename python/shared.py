@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import enum
+from collections.abc import Callable
+from enum import Enum, auto
 import re
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -8,11 +9,13 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Self
 
 import polars as pl
 
+# ----- Utilities for Core Services -----
+
 if TYPE_CHECKING:
     from python.service import EamisService
 
 
-class Weekdays(enum.Enum):
+class Weekdays(Enum):
     MONDAY = "Monday"
     TUESDAY = "Tuesday"
     WEDNESDAY = "Wednesday"
@@ -200,3 +203,30 @@ class Course:
             )
             for arrangement in arrange_info
         }
+
+
+# ----- Utilities for Application -----
+
+
+class AppEvent(Enum):
+    RETURN_TO_MAIN = auto()
+
+    MAIN_EXIT = auto()
+    MAIN_ENTER_ELECTION = auto()
+    MAIN_ENTER_CONFIG = auto()
+
+    ELECTION_CONFIRMED = auto()
+
+
+class EventBus:
+    def __init__(self):
+        self.subscribers: dict[AppEvent, list[Callable]] = {}
+
+    def subscribe(self, event: AppEvent, handler: Callable):
+        self.subscribers.setdefault(event, []).append(handler)
+
+    def publish(self, event: AppEvent, *args, **kwargs):
+        if event not in self.subscribers:
+            return None
+        for handler in self.subscribers[event]:
+            handler(*args, **kwargs)

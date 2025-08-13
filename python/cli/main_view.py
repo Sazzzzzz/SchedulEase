@@ -3,7 +3,7 @@ Main (landing) view for the TUI application.
 """
 
 from enum import Enum, auto
-from typing import Callable, Optional
+from typing import Callable
 
 from prompt_toolkit import ANSI
 from prompt_toolkit.key_binding import KeyBindings
@@ -15,6 +15,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from ..service import EamisService
+from ..shared import AppEvent, EventBus
 from .base_view import View
 
 
@@ -27,43 +28,37 @@ class LogLevel(Enum):
 class MainView(View):
     """Default landing page view."""
 
-    def __init__(
-        self,
-        service: EamisService,
-        on_start_election: Callable[[], None],
-        on_settings: Callable[[], None],
-        on_exit: Callable[[], None],
-    ) -> None:
+    def __init__(self, service: EamisService, bus: EventBus) -> None:
         super().__init__()
         self.service = service
+        self.bus = bus
 
         # Options and selection state
         self.options: list[tuple[str, Callable[[], None]]] = [
-            ("Start Election", on_start_election),
-            ("Settings", on_settings),
-            ("Exit", on_exit),
+            ("进入选课", lambda: self.bus.publish(AppEvent.MAIN_ENTER_ELECTION)),
+            ("账户设置", lambda: self.bus.publish(AppEvent.MAIN_ENTER_CONFIG)),
+            ("退出程序", lambda: self.bus.publish(AppEvent.MAIN_EXIT)),
         ]
         self.index: int = 0  # currently highlighted option
 
         # In-memory log entries (message, level)
         self.logs: list[tuple[str, LogLevel]] = []
+        self._create_layout()
 
-        # Key bindings for navigation and selection
-        self.kb = self.get_local_kb()
-
+    def _create_layout(self):
         # UI components
         self.title_box = Window(
-            content=FormattedTextControl(self.get_title), height=5, wrap_lines=True
+            content=FormattedTextControl(self._get_title), height=7, wrap_lines=True
         )
         self.log_box = Window(
-            content=FormattedTextControl(self.get_log_panel), wrap_lines=True
+            content=FormattedTextControl(self._get_log_panel), wrap_lines=True
         )
         self.options_bar = Window(
-            content=FormattedTextControl(self.get_options_bar),
+            content=FormattedTextControl(self._get_options_bar),
         )
         self.shortcuts = Window(
             height=2,
-            content=FormattedTextControl(self.get_shortcuts),
+            content=FormattedTextControl(self._get_shortcuts),
             wrap_lines=True,
         )
 
@@ -71,13 +66,12 @@ class MainView(View):
         self.main = HSplit(
             [
                 self.title_box,
-                self.separator,
                 self.log_box,
                 self.separator,
                 self.options_bar,
                 self.shortcuts,
             ],
-            key_bindings=self.kb,
+            key_bindings=self._get_local_kb(),
         )
 
         self.layout = Layout(self.main)
@@ -91,14 +85,14 @@ class MainView(View):
             self.logs = self.logs[-100:]
 
     # --------- Private: UI builders ---------
-    def get_title(self) -> ANSI:
+    def _get_title(self) -> ANSI:
         title = Text("SchedulEase", style="bold cyan", justify="center")
         subtitle = Text("NKU选课助手", justify="center")
-        return self.get_rich_content(
+        return self._get_rich_content(
             Panel(Group(title, subtitle), border_style="cyan", padding=(1, 2))
         )
 
-    def get_log_panel(self) -> ANSI:
+    def _get_log_panel(self) -> ANSI:
         if not self.logs:
             empty = Text("No recent activity.", style="dim", justify="center")
             content = Group(empty)
@@ -125,9 +119,9 @@ class MainView(View):
             border_style="cyan",
             padding=(1, 2),
         )
-        return self.get_rich_content(panel)
+        return self._get_rich_content(panel)
 
-    def get_options_bar(self) -> ANSI:
+    def _get_options_bar(self) -> ANSI:
         items: list[Text] = []
         for i, (label, _) in enumerate(self.options):
             if i == self.index:
@@ -140,16 +134,16 @@ class MainView(View):
         panel = Panel(
             row, border_style="cyan", title="[bold]Options[/bold]", padding=(0, 2)
         )
-        return self.get_rich_content(panel)
+        return self._get_rich_content(panel)
 
-    def get_shortcuts(self) -> ANSI:
-        return self.get_rich_content(
+    def _get_shortcuts(self) -> ANSI:
+        return self._get_rich_content(
             Text.from_markup(
                 "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]浏览选项[/bold]  • [bold green]Enter[/bold green]: [bold]进入界面[/bold]"
             )
         )
 
-    def get_local_kb(self) -> KeyBindings:
+    def _get_local_kb(self) -> KeyBindings:
         kb = KeyBindings()
 
         @kb.add("left")
@@ -202,12 +196,9 @@ if __name__ == "__main__":
     def on_exit():
         view.add_log("Exit requested. Press Ctrl+C to quit.")
 
-    service = DummyEamisService()
-    view = MainView(
-        service, on_start_election=on_start, on_settings=on_settings, on_exit=on_exit
-    )
-
     kb = KeyBindings()
+    service = DummyEamisService()
+    view = MainView(service, bus=EventBus())
 
     @kb.add("c-c")
     def _(event: KeyPressEvent):

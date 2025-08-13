@@ -30,7 +30,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ..service import EamisService
-from ..shared import Course, Weekdays
+from ..shared import AppEvent, Course, EventBus, Weekdays
 from .base_view import View
 
 
@@ -136,33 +136,37 @@ class Curriculum:
 
 # TUI implementation
 class ElectionView(View):
+    # TODO: add feature to save current course list
     """Election Interface"""
 
-    def __init__(self, service: EamisService) -> None:
+    def __init__(self, service: EamisService, bus: EventBus) -> None:
         super().__init__()
         # Backend service
         self.service = service
+        self.bus = bus
         self.curriculum = Curriculum()
-        self.completer = CourseCompleter(service)
+        self.create_layout()
+
+    def create_layout(self):
+        self.completer = CourseCompleter(self.service)
         self.input = Buffer(
             completer=self.completer,
             complete_while_typing=True,
             accept_handler=self.add_course,
             multiline=False,
-            validator=CourseValidator(service),
+            validator=CourseValidator(self.service),
             validate_while_typing=True,
             enable_history_search=False,
         )
 
         # Widgets
-        self.kb = self.get_local_kb()
         self.table = Window(
-            content=FormattedTextControl(self.get_curriculum_table, focusable=False),
+            content=FormattedTextControl(self._get_curriculum_table, focusable=False),
             wrap_lines=True,
         )
         self.election_list = ConditionalContainer(
             Window(
-                content=FormattedTextControl(self.get_election_list, focusable=True),
+                content=FormattedTextControl(self._get_election_list, focusable=True),
                 wrap_lines=True,
             ),
             filter=Condition(lambda: len(self.curriculum.courses) > 0),
@@ -186,18 +190,19 @@ class ElectionView(View):
         )
         self.prompt = Window(
             height=6,
-            content=FormattedTextControl(self.get_prompt),
+            content=FormattedTextControl(self._get_prompt),
         )
         self.shortcuts = Window(
             height=2,
             content=FormattedTextControl(
-                text=self.get_rich_content(
+                text=self._get_rich_content(
                     Text.from_markup(
-                        "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Ctrl+X[/bold green]: [bold]删除课程[/bold]",
+                        "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Ctrl+X[/bold green]: [bold]删除课程[/bold]  • [bold yellow]Ctrl+S[/bold yellow]: [bold]下一步[/bold]",
                     )
                 ),
             ),
         )
+        self.completions_menu = CompletionsMenu(max_height=12, scroll_offset=1)
         self.main = HSplit(
             [
                 self.table,
@@ -217,37 +222,48 @@ class ElectionView(View):
                 floats=[
                     Float(
                         # TODO: Adjust position and size
-                        content=CompletionsMenu(max_height=12, scroll_offset=1),
+                        content=self.completions_menu,
                         xcursor=True,
                         ycursor=True,
                     ),
                 ],
-                key_bindings=self.kb,
+                key_bindings=self._get_local_kb(),
             )
         )
-        self.focus_index = 0
+        self._focus_index = 0
 
-    def get_local_kb(self) -> KeyBindings:
+    def _get_local_kb(self) -> KeyBindings:
         kb = KeyBindings()
 
         @kb.add("left")
         def _left(event):
-            self.focus_index -= 1
+            self._focus_index -= 1
 
         @kb.add("right")
         def _right(event):
-            self.focus_index += 1
+            self._focus_index += 1
 
-        @kb.add("c-x")
-        def _c_x(event):
-            if self.focus_index == 0:
+        @kb.add(
+            "backspace",
+            "delete",
+            eager=True,
+            filter=Condition(lambda: self.layout.has_focus(self.election_list)),
+        )
+        def _backspace(event):
+            if self._focus_index == 0:
                 return None
-            self.curriculum.remove_course(self.curriculum.courses[self.focus_index - 1])
-            self.focus_index -= 1
+            self.curriculum.remove_course(
+                self.curriculum.courses[self._focus_index - 1]
+            )
+            self._focus_index -= 1
+
+        @kb.add("c-s")
+        def _c_s(event):
+            self.bus.publish(AppEvent.ELECTION_CONFIRMED, self.curriculum.courses)
 
         return kb
 
-    def get_curriculum_table(self, classes: int = 14) -> ANSI:
+    def _get_curriculum_table(self, classes: int = 14) -> ANSI:
         """
         Displays a curriculum table with 2-line rows showing course names and locations/conflicts.
         """
@@ -303,13 +319,13 @@ class ElectionView(View):
 
             table.add_row(*row_data)
 
-        return self.get_rich_content(table)
+        return self._get_rich_content(table)
 
-    def get_prompt(self) -> ANSI:
+    def _get_prompt(self) -> ANSI:
         message = """\
 • 输入课程/老师名称添加课程
 • 程序将自动进行冲突检测，无需提前排除冲突课程"""
-        return self.get_rich_content(
+        return self._get_rich_content(
             Panel(
                 Text.from_markup(message),
                 title="[bold cyan]Commands[/bold cyan]",
@@ -319,13 +335,13 @@ class ElectionView(View):
             )
         )
 
-    def get_election_list(self) -> ANSI:
+    def _get_election_list(self) -> ANSI:
         """Display selected courses summary, conflicts, and commands."""
         renderables = []
 
         renderables.append(Text("Selected Courses:", style="bold green"))
         for i, course in enumerate(self.curriculum.courses, 1):
-            if i == self.focus_index:
+            if i == self._focus_index:
                 line = Text(
                     f" › {i}. {course.name} - {'; '.join(course.teachers)}",
                     style="cyan bold",
@@ -344,7 +360,7 @@ class ElectionView(View):
         # By displaying all conflicts, one could make sense of the full picture
         # of conflicts and resolve them accordingly
         if not self.curriculum.conflicts:
-            return self.get_rich_content(Group(*renderables))
+            return self._get_rich_content(Group(*renderables))
         renderables.append(Text("\nConflicts Detected:", style="bold red"))
         # TODO: Nasty logic, fix later
         for course_id, conflicting_ids in self.curriculum.conflicts.items():
@@ -377,26 +393,26 @@ class ElectionView(View):
                     )
                 )
 
-        return self.get_rich_content(Group(*renderables))
+        return self._get_rich_content(Group(*renderables))
 
-    def update_focus(self, index: int):
+    def _update_focus(self, index: int):
         if index == 0:
             self.layout.focus(self.input)
         else:
             self.layout.focus(self.election_list)
 
     @property
-    def focus_index(self) -> int:
+    def _focus_index(self) -> int:
         """Get the current focus index.
 
         focus_index = 0: input field
         focus_index > 0: election list, index corresponds to the course in the list"""
         return self._focus_index
 
-    @focus_index.setter
-    def focus_index(self, value: int) -> None:
+    @_focus_index.setter
+    def _focus_index(self, value: int) -> None:
         self._focus_index = value % (len(self.curriculum.courses) + 1)
-        self.update_focus(self._focus_index)
+        self._update_focus(self._focus_index)
 
     def add_course(self, buffer: Buffer) -> bool:
         """Adds a course to the curriculum based on user input."""
@@ -419,7 +435,7 @@ if __name__ == "__main__":
         """Pressing Ctrl-C will exit the application."""
         event.app.exit()
 
-    view = ElectionView(DummyEamisService())
+    view = ElectionView(DummyEamisService(), EventBus())
     app = Application(
         layout=view.layout,
         full_screen=True,

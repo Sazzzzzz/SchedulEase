@@ -1,125 +1,90 @@
 """
 Presenter for the whole SchedulEase application.
 """
-import schedule
-import threading
-import time
-from typing import Optional
 
-from prompt_toolkit import print_formatted_text as print
-from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.shortcuts import radiolist_dialog, message_dialog, button_dialog
+from enum import Enum, auto
 
-from cli.config_view import ConfigView
-from cli.election_view import ElectionView
-from cli.schedule_view import ScheduleView
-from python.tests.dummy_service import DummyEamisService
-from service import EamisService, ConnectionError, LoginError
-from shared import Course
+from prompt_toolkit import Application
+from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
+
+from .cli.base_view import View
+from .cli.config_view import ConfigView
+from .cli.election_view import ElectionView
+from .cli.main_view import MainView
+from .cli.schedule_view import ScheduleView
+from .service import EamisService
+from .shared import AppEvent, Course, EventBus
 
 
-class Application:
-    """Main CLI Application."""
+class State(Enum):
+    MAIN = auto()
+    ELECTION = auto()
+    SCHEDULE = auto()
+    CONFIG = auto()
 
-    def __init__(self):
-        self.service: Optional[EamisService] = None
-        self.selected_courses: list[Course] = []
-        self.scheduler_thread: Optional[threading.Thread] = None
-        self.stop_event = threading.Event()
 
-    def _run_scheduler(self):
-        """Target for the scheduler thread."""
-        while not self.stop_event.is_set():
-            schedule.run_pending()
-            time.sleep(1)
+class MainApp(Application):
+    def __init__(self, service: EamisService, **kwargs):
+        self.service = service
+        self.bus = EventBus()
+        self.election_view = ElectionView(service, self.bus)
+        self.schedule_view = ScheduleView(service, self.bus)
+        self.config_view = ConfigView(service, self.bus)
+        self.main_view = MainView(service, self.bus)
+        super().__init__(layout=self.main_view.layout, **kwargs)
+        self.lookup: dict[State, View] = {
+            State.ELECTION: self.election_view,
+            State.SCHEDULE: self.schedule_view,
+            State.CONFIG: self.config_view,
+        }
+        self.key_bindings = self.get_keybindings()
+        self.register()
+        self.state = State.MAIN
 
-    def run(self):
-        """Main application entry point."""
-        print(HTML("<b><ansicyan>Welcome to SchedulEase! 🎉</ansicyan></b>"))
+    @property
+    def state(self):
+        return self._state
 
-        # --- Config and Service Initialization ---
-        try:
-            config = load_config()
-            print("Configuration loaded. Initializing service...")
-            # self.service = EamisService(config)
-            self.service = DummyEamisService()
-            self.service.initial_connection()
-            print(HTML("<ansigreen>✓ Service initialized successfully.</ansigreen>"))
-        except FileNotFoundError:
-            if button_dialog(
-                title="Configuration Not Found",
-                text="No existing configuration found. Would you like to create one now?",
-                buttons=[("Yes", True), ("No", False)],
-            ).run():
-                setup_config()
-                self.run()  # Restart
-            return
-        except (ConnectionError, LoginError) as e:
-            message_dialog(title="Service Error", text=f"Failed to connect: {e}").run()
-            return
-        except Exception as e:
-            message_dialog(
-                title="Error", text=f"An unexpected error occurred: {e}"
-            ).run()
-            return
+    @state.setter
+    def state(self, state: State):
+        self._state = state
+        self.layout = self.lookup.get(state, self.main_view).layout
 
-        # --- Start Scheduler Thread ---
-        self.scheduler_thread = threading.Thread(
-            target=self._run_scheduler, daemon=True
-        )
-        self.scheduler_thread.start()
+    def register(self):
+        self.bus.subscribe(AppEvent.MAIN_EXIT, self.exit)
+        self.bus.subscribe(AppEvent.MAIN_ENTER_CONFIG, self.on_config)
+        self.bus.subscribe(AppEvent.MAIN_ENTER_ELECTION, self.on_election)
 
-        # --- Main Menu Loop ---
-        while True:
-            next_run = schedule.next_run() if schedule.jobs else None
-            next_run_time = (
-                next_run.strftime("%Y-%m-%d %H:%M:%S") if next_run else "Not scheduled"
-            )
-            menu_title = HTML(
-                "<b><ansicyan>SchedulEase Main Menu</ansicyan></b>\n"
-                f"Selected Courses: <b>{len(self.selected_courses)}</b> | "
-                f"Next Election: <b>{next_run_time}</b>"
-            )
+        self.bus.subscribe(AppEvent.RETURN_TO_MAIN, self.on_main)
 
-            choice = radiolist_dialog(
-                title=menu_title,
-                values=[
-                    ("elect", "Elect Courses"),
-                    ("schedule", "Schedule Election"),
-                    ("config", "Edit Config"),
-                    ("exit", "Exit"),
-                ],
-            ).run()
+        self.bus.subscribe(AppEvent.ELECTION_CONFIRMED, self.on_election_confirmed)
 
-            if choice == "elect":
-                election_view = ElectionView(self.service)
-                self.selected_courses = election_view.run(self.selected_courses)
-            elif choice == "schedule":
-                if not self.selected_courses:
-                    message_dialog(
-                        title="No Courses",
-                        text="Please select courses to elect first.",
-                    ).run()
-                    continue
-                schedule_view = ScheduleView(self.service)
-                schedule_view.run(self.selected_courses)
-            elif choice == "config":
-                setup_config()
-                message_dialog(
-                    title="Config Updated",
-                    text="Configuration updated. Please restart the application to apply changes.",
-                ).run()
-                break  # Force restart
-            elif choice == "exit" or choice is None:
-                break
+    def on_election(self):
+        self.state = State.ELECTION
 
-        # --- Cleanup ---
-        self.stop_event.set()
-        if self.scheduler_thread:
-            self.scheduler_thread.join(timeout=2)
-        print(HTML("<b><ansiyellow>Goodbye!</ansiyellow></b>"))
+    def on_config(self):
+        self.state = State.CONFIG
+
+    def on_main(self):
+        self.state = State.MAIN
+
+    def on_election_confirmed(self, courses: list[Course]):
+        self.schedule_view.set_courses(courses)
+        self.state = State.SCHEDULE
+
+    def get_keybindings(self) -> KeyBindings:
+        kb = KeyBindings()
+
+        @kb.add("c-c")
+        def _(event: KeyPressEvent):
+            """Press Ctrl-C to exit the application."""
+            event.app.exit()
+
+        return kb
 
 
 if __name__ == "__main__":
-    app = Application()
+    from .tests.dummy_service import DummyEamisService
+
+    app = MainApp(service=DummyEamisService(), full_screen=True)
     app.run()

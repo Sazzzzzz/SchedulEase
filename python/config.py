@@ -1,5 +1,6 @@
 import hashlib
 import tomllib
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -36,7 +37,7 @@ Sec-Ch-Ua-Platform = '"macOS"'
 account = "{account}"
 encrypted_password = "{encrypted_password}"
 """
-
+logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()
 CONFIG_PATH = SCRIPT_DIR / "data" / "config.toml"
 
@@ -66,7 +67,7 @@ def create_config(account: str, password: str) -> None:
             )
         )
 
-    print("Default configuration file created.")
+    logger.info("Default configuration file created.")
 
 
 def load_config() -> dict[str, Any]:

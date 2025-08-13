@@ -1,9 +1,10 @@
 """
 Core service for interacting with the EAMIS backend.
 """
+
 from __future__ import annotations
 
-import enum
+from enum import Enum
 import logging
 import random
 import re
@@ -71,6 +72,7 @@ CourseInfo: TypeAlias = dict[str, Any]
 
 logger = logging.getLogger(__name__)
 
+
 class EamisService:
     # ---- Utilities ----
     # "startWeek", "endWeek", "credits" can be added later if needed
@@ -96,7 +98,7 @@ class EamisService:
     P = ParamSpec("P")
     T = TypeVar("T")
 
-    class Operation(enum.Enum):
+    class Operation(Enum):
         """Enum for course operations."""
 
         ELECT = True
@@ -522,13 +524,14 @@ class EamisService:
         df = EamisService.expand_lesson_groups(df)
         return df
 
-    # ---- Helper Functions ----
+    # ----- Helper Functions -----
     def delay_task(
         self, time: float, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
     ) -> T:
         """
         Helper function to delay the execution of a task.
         """
+        # TODO: Make all `args` `kwargs` well documented
         sleep(time)
         return func(*args, **kwargs)
 

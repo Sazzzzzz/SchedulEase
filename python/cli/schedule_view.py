@@ -34,12 +34,13 @@ from rich.text import Text
 
 from .base_view import View
 from ..service import EamisService
-from ..shared import Course
+from ..shared import AppEvent, Course, EventBus
 
 logger = logging.getLogger(__name__)
 
 
 class LoggerMixin(View):
+    # TODO: Add doc
     def __init__(self):
         super().__init__()
         self.logger = logger
@@ -83,9 +84,10 @@ class TimeValidator(Validator):
 class ScheduleView(View):
     """TUI interface for scheduling course elections at specific times."""
 
-    def __init__(self, service: EamisService):
+    def __init__(self, service: EamisService, bus: EventBus):
         super().__init__()
         self.service = service
+        self.bus = bus
         self.logger = LoggerMixin()
 
         # State management
@@ -94,27 +96,27 @@ class ScheduleView(View):
         self.target_datetime: Optional[datetime] = None
         self._refresh_task: Optional[asyncio.Task] = None
 
+        self._create_layout()
+
+    def _create_layout(self):
         # Input buffer for time entry
         self.time_buffer = Buffer(
-            accept_handler=self.handle_time_input,
+            accept_handler=self._handle_time_input,
             multiline=False,
             validator=TimeValidator(),
             validate_while_typing=True,
         )
 
-        # Key bindings
-        self.kb = self.get_local_kb()
-
         # UI Components - Header (always visible)
         self.header = Window(
-            content=FormattedTextControl(self.get_header),
+            content=FormattedTextControl(self._get_header),
             height=6,
             wrap_lines=True,
         )
 
         # Course list (always visible)
         self.course_list = Window(
-            content=FormattedTextControl(self.get_course_list),
+            content=FormattedTextControl(self._get_course_list),
             wrap_lines=True,
         )
 
@@ -123,7 +125,7 @@ class ScheduleView(View):
             content=HSplit(
                 [
                     Window(
-                        content=FormattedTextControl(self.get_time_instructions),
+                        content=FormattedTextControl(self._get_time_instructions),
                         wrap_lines=True,
                         height=4,
                     ),
@@ -145,7 +147,7 @@ class ScheduleView(View):
         # Status and log panels (only visible when scheduled)
         self.status_panel = ConditionalContainer(
             content=Window(
-                content=FormattedTextControl(self.get_status_panel),
+                content=FormattedTextControl(self._get_status_panel),
                 wrap_lines=True,
                 height=8,
             ),
@@ -154,7 +156,7 @@ class ScheduleView(View):
 
         self.log_panel = ConditionalContainer(
             content=Window(
-                content=FormattedTextControl(self.get_log_panel),
+                content=FormattedTextControl(self._get_log_panel),
                 wrap_lines=True,
             ),
             filter=Condition(lambda: self.state is not State.PREINPUT),
@@ -162,7 +164,7 @@ class ScheduleView(View):
 
         # Shortcut panel (always visible, content changes based on state)
         self.shortcuts = Window(
-            content=FormattedTextControl(self.get_shortcuts),
+            content=FormattedTextControl(self._get_shortcuts),
             height=2,
             wrap_lines=True,
         )
@@ -184,7 +186,7 @@ class ScheduleView(View):
                 self.shortcuts,
                 self.error_toolbar,
             ],
-            key_bindings=self.kb,
+            key_bindings=self._get_local_kb(),
         )
 
         self.layout = Layout(self.main, focused_element=self.time_input)
@@ -216,7 +218,7 @@ class ScheduleView(View):
                 raise ValueError(f"Invalid state transition: {self._state} -> {value}")
         self._state = value
 
-    def get_local_kb(self) -> KeyBindings:
+    def _get_local_kb(self) -> KeyBindings:
         """Define local key bindings for the view."""
         kb = KeyBindings()
 
@@ -225,7 +227,7 @@ class ScheduleView(View):
             """Simulate scheduled execution for testing."""
             if self.state is not State.RUNNING:
                 logger.info("🧪 [TEST] Simulating scheduled execution...")
-                self.execute_election_background()
+                self._execute_election_background()
 
         @kb.add("c-x")
         def _c_x(event: KeyPressEvent):
@@ -233,9 +235,15 @@ class ScheduleView(View):
             if self.state is State.POSTINPUT:
                 self.cancel()
 
+        @kb.add("home")
+        def _home(event: KeyPressEvent, eager=True):
+            """Return to the main menu."""
+            if self.state is State.RUNNING:
+                self.bus.publish(AppEvent.RETURN_TO_MAIN)
+
         return kb
 
-    def get_header(self):
+    def _get_header(self):
         """Generate the header panel."""
         title = Text("Course Election Scheduler", style="bold cyan", justify="center")
         subtitle = Text("定时选课界面", style="dim", justify="center")
@@ -244,9 +252,9 @@ class ScheduleView(View):
             border_style="cyan",
             padding=(1, 2),
         )
-        return self.get_rich_content(panel)
+        return self._get_rich_content(panel)
 
-    def get_course_list(self):
+    def _get_course_list(self):
         """Display the list of courses to be scheduled."""
         table = Table(
             title=f"Courses to Schedule ({len(self.courses)})", show_header=True
@@ -265,9 +273,9 @@ class ScheduleView(View):
                 ", ".join(course.teachers),
             )
 
-        return self.get_rich_content(table)
+        return self._get_rich_content(table)
 
-    def get_time_instructions(self):
+    def _get_time_instructions(self):
         """Generate time input instructions."""
         instructions = [
             "[bold cyan] 请输入计划选课的时间 [/bold cyan]",
@@ -280,9 +288,9 @@ class ScheduleView(View):
         text = Text()
         for instruction in instructions:
             text.append_text(Text.from_markup(instruction + "\n"))
-        return self.get_rich_content(text)
+        return self._get_rich_content(text)
 
-    def get_status_panel(self):
+    def _get_status_panel(self):
         """Display current scheduling status."""
         now = datetime.now()
         if self.target_datetime is None:
@@ -317,14 +325,14 @@ class ScheduleView(View):
             padding=(1, 2),
         )
 
-        return self.get_rich_content(panel)
+        return self._get_rich_content(panel)
 
-    def get_log_panel(self) -> ANSI:
+    def _get_log_panel(self) -> ANSI:
         """Display scheduling and execution logs using rich logging."""
 
         return self.logger.get_log()
 
-    def get_shortcuts(self) -> ANSI:
+    def _get_shortcuts(self) -> ANSI:
         """Display control instructions."""
         match self.state:
             case State.PREINPUT:
@@ -332,9 +340,9 @@ class ScheduleView(View):
             case State.POSTINPUT:
                 controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold green]Ctrl+S[/bold green]: [bold]立即选课[/bold]  • [bold yellow]Ctrl+X[/bold yellow]: [bold]编辑时间[/bold]"
             case State.RUNNING:
-                controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]"
+                controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold green]Home[/bold green]: [bold]返回主页[/bold]"
 
-        return self.get_rich_content(Text.from_markup(controls))
+        return self._get_rich_content(Text.from_markup(controls))
 
     def _start_refresh(self):
         """Start the auto-refresh page when scheduling begins."""
@@ -360,7 +368,7 @@ class ScheduleView(View):
         except asyncio.CancelledError:
             pass
 
-    def handle_time_input(self, buffer: Buffer) -> bool:
+    def _handle_time_input(self, buffer: Buffer) -> bool:
         """Handle time input and schedule the election with enhanced validation."""
         time_str = buffer.text.strip()
 
@@ -379,7 +387,7 @@ class ScheduleView(View):
             self.state = State.POSTINPUT
 
             # Schedule the job
-            schedule.every().day.at(time_str).do(self.execute_election_background).tag(
+            schedule.every().day.at(time_str).do(self._execute_election_background).tag(
                 "election"
             )
             logger.info(
@@ -403,7 +411,7 @@ class ScheduleView(View):
         logger.info("❌ Scheduling cancelled - returning to input mode")
         self.layout.focus(self.time_input)
 
-    def execute_election_background(self):
+    def _execute_election_background(self):
         """
         Non-blocking wrapper scheduled by `schedule`.
         """
@@ -425,7 +433,7 @@ class ScheduleView(View):
         logger.debug("🎉 Course election completed!")
         schedule.clear("election")
 
-    def execute_election(self):
+    def _execute_election(self):
         """Execute the course election process."""
         logger.info("🚀 Starting course election process...")
         self.service.elect_courses(self.courses)
@@ -443,7 +451,7 @@ if __name__ == "__main__":
     test_courses = [
         Course.from_row(row, service) for row in service.course_info.head(5).to_dicts()
     ]  # Take some rows
-    view = ScheduleView(service)
+    view = ScheduleView(service, EventBus())
     view.set_courses(test_courses)  # Set courses for scheduling
 
     kb = KeyBindings()

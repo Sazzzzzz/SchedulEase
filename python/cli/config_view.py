@@ -2,8 +2,7 @@
 View object responsible for creating and editing configurations.
 """
 
-import enum
-from enum import auto
+from enum import Enum, auto
 from typing import Optional
 
 from prompt_toolkit.buffer import Buffer
@@ -26,12 +25,13 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from .base_view import View
 from ..config import CONFIG_PATH, create_config, load_config
 from ..service import EamisService
+from ..shared import AppEvent, EventBus
+from .base_view import View
 
 
-class State(enum.Enum):
+class State(Enum):
     """State management for the configuration steps."""
 
     ACCOUNT = auto()
@@ -58,50 +58,51 @@ class PasswordValidator(Validator):
 class ConfigView(View):
     """Configuration Interface for account setup"""
 
-    def __init__(self, service: EamisService) -> None:
+    def __init__(self, service: EamisService, bus: EventBus) -> None:
         super().__init__()
         self.service = service
+        self.bus = bus
 
         # State management
         self.state: State = State.ACCOUNT
         self.account: str = ""
         self.password: str = ""
 
+        self._create_layout()
+
+    def _create_layout(self):
         # Input buffers
         self.account_buffer = Buffer(
-            accept_handler=self.handle_account_input,
+            accept_handler=self._handle_account_input,
             multiline=False,
         )
 
         self.password_buffer = Buffer(
-            accept_handler=self.handle_password_input,
+            accept_handler=self._handle_password_input,
             multiline=False,
         )
         # Validator will be set after password input
         self.confirm_buffer = Buffer(
-            accept_handler=self.handle_confirm_input,
+            accept_handler=self._handle_confirm_input,
             multiline=False,
             validate_while_typing=True,
             validator=PasswordValidator(),
         )
 
-        # Key bindings
-        self.kb = self.get_local_kb()
-
         # UI Components
         self.header = Window(
-            content=FormattedTextControl(self.get_header),
+            content=FormattedTextControl(self._get_header),
             height=7,
             wrap_lines=True,
         )
 
         self.instructions = Window(
-            content=FormattedTextControl(self.get_instructions),
+            content=FormattedTextControl(self._get_instructions),
             wrap_lines=True,
         )
 
         self.input_label = Window(
-            content=FormattedTextControl(self.get_input_label),
+            content=FormattedTextControl(self._get_input_label),
             height=1,
             style="class:label",
         )
@@ -119,7 +120,7 @@ class ConfigView(View):
                 ),
             ]
         )
-        self.prefill_account()
+        self._prefill_account()
 
         self.password_input = VSplit(
             [
@@ -153,7 +154,7 @@ class ConfigView(View):
             ]
         )
         self.shortcuts = Window(
-            content=FormattedTextControl(self.get_shortcuts),
+            content=FormattedTextControl(self._get_shortcuts),
             height=2,
             wrap_lines=True,
         )
@@ -177,7 +178,7 @@ class ConfigView(View):
 
         self.success_panel = ConditionalContainer(
             content=Window(
-                content=FormattedTextControl(self.get_success_panel),
+                content=FormattedTextControl(self._get_success_panel),
                 wrap_lines=True,
             ),
             filter=Condition(lambda: self.state is State.COMPLETE),
@@ -197,19 +198,26 @@ class ConfigView(View):
                 self.success_panel,
                 self.shortcuts,
                 self.error_toolbar,
-            ]
+            ],
+            key_bindings=self._get_local_kb(),
         )
 
         self.layout = Layout(self.main, focused_element=self.account_input)
 
-    def get_local_kb(self) -> KeyBindings:
+    def _get_local_kb(self) -> KeyBindings:
         """Define local key bindings for the view."""
         kb = KeyBindings()
-        # placeholder for future shortcuts
+
+        @kb.add(
+            "enter", eager=True, filter=Condition(lambda: self.state is State.COMPLETE)
+        )
+        def _enter(event: KeyPressEvent):
+            if self.state is State.COMPLETE:
+                self.bus.publish(AppEvent.RETURN_TO_MAIN)
 
         return kb
 
-    def prefill_account(self):
+    def _prefill_account(self):
         """Prefill the account input with existing account if available."""
         try:
             config = load_config()
@@ -218,7 +226,7 @@ class ConfigView(View):
         except Exception:
             return None
 
-    def get_header(self) -> ANSI:
+    def _get_header(self) -> ANSI:
         """Generate the header panel."""
         title = Text(
             "Course Election Configuration", style="bold cyan", justify="center"
@@ -230,9 +238,9 @@ class ConfigView(View):
             border_style="cyan",
             padding=(1, 2),
         )
-        return self.get_rich_content(panel)
+        return self._get_rich_content(panel)
 
-    def get_instructions(self) -> ANSI:
+    def _get_instructions(self) -> ANSI:
         """Generate context-sensitive instructions."""
         # TODO: Rewrite this in `Group` for better formatting
         instructions = {
@@ -260,9 +268,9 @@ class ConfigView(View):
         for instruction in current_instructions:
             text.append_text(Text.from_markup(instruction + "\n"))
 
-        return self.get_rich_content(text)
+        return self._get_rich_content(text)
 
-    def get_input_label(self) -> ANSI:
+    def _get_input_label(self) -> ANSI:
         """Generate the input field label."""
         labels = {
             State.ACCOUNT: "[bold cyan]Student ID:[/bold cyan]",
@@ -272,9 +280,9 @@ class ConfigView(View):
         }
 
         label = labels.get(self.state, "")
-        return self.get_rich_content(Text.from_markup(label))
+        return self._get_rich_content(Text.from_markup(label))
 
-    def get_success_panel(self) -> ANSI:
+    def _get_success_panel(self) -> ANSI:
         """Generate the success panel after configuration is complete.
 
         This looks really good : )"""
@@ -294,16 +302,16 @@ class ConfigView(View):
             padding=(1, 2),
         )
 
-        return self.get_rich_content(panel)
+        return self._get_rich_content(panel)
 
-    def get_shortcuts(self) -> ANSI:
-        return self.get_rich_content(
+    def _get_shortcuts(self) -> ANSI:
+        return self._get_rich_content(
             Text.from_markup(
                 "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold] • [bold cyan]Enter[/bold cyan]: [bold]下一步[/bold]"
             )
         )
 
-    def handle_account_input(self, buffer: Buffer) -> bool:
+    def _handle_account_input(self, buffer: Buffer) -> bool:
         """Handle account name input."""
         account = buffer.text.strip()
         self.account = account
@@ -311,7 +319,7 @@ class ConfigView(View):
         self.layout.focus(self.password_input)
         return False  # Don't close the buffer
 
-    def handle_password_input(self, buffer: Buffer) -> bool:
+    def _handle_password_input(self, buffer: Buffer) -> bool:
         """Handle password input."""
         password = buffer.text
         if not password:
@@ -323,7 +331,7 @@ class ConfigView(View):
         self.layout.focus(self.confirm_input)
         return False
 
-    def handle_confirm_input(self, buffer: Buffer) -> bool:
+    def _handle_confirm_input(self, buffer: Buffer) -> bool:
         """Handle (already validated) password confirmation."""
         try:
             create_config(self.account, self.password)
@@ -331,7 +339,7 @@ class ConfigView(View):
         except Exception:
             return False
 
-        return False
+        return True
 
 
 if __name__ == "__main__":
@@ -342,13 +350,14 @@ if __name__ == "__main__":
     from ..tests.dummy_service import DummyEamisService
 
     kb = KeyBindings()
+    bus = EventBus()
 
     @kb.add("c-c")
     def _(event: KeyPressEvent):
         """Pressing Ctrl-C will exit the application."""
         event.app.exit()
 
-    view = ConfigView(DummyEamisService())
+    view = ConfigView(DummyEamisService(), bus)
     app = Application(
         layout=view.layout,
         full_screen=True,

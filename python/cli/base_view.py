@@ -3,6 +3,7 @@ from abc import ABC
 
 from prompt_toolkit import ANSI
 from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.controls import FormattedTextControl
 from rich.console import Console
 from rich.rule import Rule
@@ -12,6 +13,8 @@ class View(ABC):
     """
     Base class for TUI views. Provides boilerplate for view objects.
     """
+
+    layout: Layout
 
     def __init__(self):
         self.io = io.StringIO()
@@ -25,10 +28,10 @@ class View(ABC):
         # Prebuilt widget
         self.separator = Window(
             height=1,
-            content=FormattedTextControl(text=self.get_line_separator),
+            content=FormattedTextControl(text=self._get_line_separator),
         )
 
-    def get_rich_content(self, *args, **kwargs) -> ANSI:
+    def _get_rich_content(self, *args, **kwargs) -> ANSI:
         """
         A utility function to render rich content to a string buffer.
         """
@@ -40,8 +43,8 @@ class View(ABC):
         self.io.truncate(0)
         return ANSI(output)
 
-    def get_line_separator(self) -> ANSI:
+    def _get_line_separator(self) -> ANSI:
         """
         Returns a horizontal line separator for the layout.
         """
-        return self.get_rich_content(Rule(style="cyan"))
+        return self._get_rich_content(Rule(style="cyan"))
