@@ -217,6 +217,8 @@ class AppEvent(Enum):
 
     ELECTION_CONFIRMED = auto()
 
+    APP_NO_CONFIG = auto()
+    APP_OK = auto()
 
 class EventBus:
     def __init__(self):

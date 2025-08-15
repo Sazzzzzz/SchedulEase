@@ -233,7 +233,6 @@ class EamisService:
                 f"An unknown error occurred while fetching course election menu: {e}"
             ) from e
         soup = BeautifulSoup(course_elect_menu_response.content, "lxml")
-        print(soup.prettify())  # Debugging output to see the HTML structure
         # Check if the course election menu is available
         if soup.find(string=re.compile(r"无法选课")):
             raise ServiceError("Course election menu is currently not available.")
@@ -404,9 +403,9 @@ class EamisService:
                 try:
                     future.result()
                 except ElectError as e:
-                    print(f"Error electing course: {e}")
+                    logger.error(f"Error electing course: {e}")
                 except Exception as e:
-                    print(f"Unexpected error: {e}")
+                    logger.error(f"Unexpected error: {e}")
 
     # ---- Course Information Processing ----
     @staticmethod

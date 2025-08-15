@@ -2,10 +2,12 @@
 Main (landing) view for the TUI application.
 """
 
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Callable
 
 from prompt_toolkit import ANSI
+from prompt_toolkit.application import get_app
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import HSplit, Window
@@ -14,7 +16,6 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from ..service import EamisService
 from ..shared import AppEvent, EventBus
 from .base_view import View
 
@@ -25,25 +26,60 @@ class LogLevel(Enum):
     SUCCESS = auto()
 
 
+@dataclass
+class Option:
+    name: str
+    action: Callable[[], None]
+
+
+class State(Enum):
+    # These record the index of active options
+    ON_HALT = tuple()
+    FORCE_SCHEDULE = (1, 2)
+    NORMAL = (0, 1, 2)
+
+
 class MainView(View):
     """Default landing page view."""
 
-    def __init__(self, service: EamisService, bus: EventBus) -> None:
+    def __init__(self, bus: EventBus) -> None:
         super().__init__()
-        self.service = service
         self.bus = bus
 
         # Options and selection state
-        self.options: list[tuple[str, Callable[[], None]]] = [
-            ("进入选课", lambda: self.bus.publish(AppEvent.MAIN_ENTER_ELECTION)),
-            ("账户设置", lambda: self.bus.publish(AppEvent.MAIN_ENTER_CONFIG)),
-            ("退出程序", lambda: self.bus.publish(AppEvent.MAIN_EXIT)),
+        self.total_options = [
+            Option("进入选课", lambda: self.bus.publish(AppEvent.MAIN_ENTER_ELECTION)),
+            Option("账户设置", lambda: self.bus.publish(AppEvent.MAIN_ENTER_CONFIG)),
+            Option("退出程序", lambda: self.bus.publish(AppEvent.MAIN_EXIT)),
         ]
+        self.state = State.ON_HALT
         self.index: int = 0  # currently highlighted option
+        self.register()
 
         # In-memory log entries (message, level)
         self.logs: list[tuple[str, LogLevel]] = []
+
         self._create_layout()
+
+    @property
+    def state(self) -> State:
+        return self._state
+
+    @state.setter
+    def state(self, state: State):
+        self._state = state
+        self.options = [self.total_options[i] for i in state.value]
+        get_app().invalidate()
+
+    def register(self):
+        self.bus.subscribe(AppEvent.APP_NO_CONFIG, self.set_on_schedule)
+        self.bus.subscribe(AppEvent.APP_OK, self.set_on_election)
+
+    def set_on_schedule(self):
+        self.state = State.FORCE_SCHEDULE
+
+    def set_on_election(self):
+        self.state = State.NORMAL
 
     def _create_layout(self):
         # UI components
@@ -83,6 +119,7 @@ class MainView(View):
         # Keep last 100 entries
         if len(self.logs) > 100:
             self.logs = self.logs[-100:]
+        get_app().invalidate()
 
     # --------- Private: UI builders ---------
     def _get_title(self) -> ANSI:
@@ -99,15 +136,16 @@ class MainView(View):
         else:
             lines: list[Text] = []
             for msg, level in self.logs[-30:]:  # show last 30 messages
-                if level == "success":
-                    mark = "✔"
-                    style = "green"
-                elif level == "error":
-                    mark = "✖"
-                    style = "red"
-                else:
-                    mark = "•"
-                    style = "cyan"
+                match level:
+                    case LogLevel.SUCCESS:
+                        mark = "✔"
+                        style = "green"
+                    case LogLevel.ERROR:
+                        mark = "✖"
+                        style = "red"
+                    case _:
+                        mark = "•"
+                        style = "cyan"
                 lines.append(
                     Text.from_markup(f"[bold {style}]{mark}[/bold {style}] {msg}")
                 )
@@ -123,11 +161,18 @@ class MainView(View):
 
     def _get_options_bar(self) -> ANSI:
         items: list[Text] = []
-        for i, (label, _) in enumerate(self.options):
-            if i == self.index:
-                items.append(Text.from_markup(f"[bold cyan]› {label} ‹[/bold cyan]"))
+        for i, opt in enumerate(self.total_options):
+            if opt in self.options:
+                # Find the position of this option in the filtered self.options list
+                option_index = self.options.index(opt)
+                if option_index == self.index:
+                    items.append(
+                        Text.from_markup(f"[bold cyan]› {opt.name} ‹[/bold cyan]")
+                    )
+                else:
+                    items.append(Text.from_markup(f"{opt.name}"))
             else:
-                items.append(Text.from_markup(f"[dim]{label}[/dim]"))
+                items.append(Text.from_markup(f"[strike]{opt.name}[/strike]"))
 
         # Center the options inside a panel
         row = Text("\n").join(items)
@@ -148,34 +193,37 @@ class MainView(View):
 
         @kb.add("left")
         def _left(_):
-            self.index = (self.index - 1) % len(self.options)
+            if len(self.options) > 0:
+                self.index = (self.index - 1) % len(self.options)
 
         @kb.add("right")
         def _right(_):
-            self.index = (self.index + 1) % len(self.options)
+            if len(self.options) > 0:
+                self.index = (self.index + 1) % len(self.options)
 
         @kb.add("up")
         def _up(_):
             # mirror horizontal navigation for convenience
-            self.index = (self.index - 1) % len(self.options)
+            if len(self.options) > 0:
+                self.index = (self.index - 1) % len(self.options)
 
         @kb.add("down")
         def _down(_):
-            self.index = (self.index + 1) % len(self.options)
+            if len(self.options) > 0:
+                self.index = (self.index + 1) % len(self.options)
 
         @kb.add("enter")
         def _enter(event):
-            label, handler = self.options[self.index]
-            if handler is not None:
-                try:
-                    handler()
-                except Exception as e:
-                    self.add_log(f"Failed to run '{label}': {e}", level=LogLevel.ERROR)
-                else:
-                    self.add_log(f"Executed '{label}'", level=LogLevel.SUCCESS)
-            else:
-                # Fallback: just log the selection
-                self.add_log(f"Selected '{label}'")
+            if 0 <= self.index < len(self.options):
+                opt = self.options[self.index]
+                label, handler = opt.name, opt.action
+                if handler is not None:
+                    try:
+                        handler()
+                    except Exception as e:
+                        self.add_log(
+                            f"Failed to run '{label}': {e}", level=LogLevel.ERROR
+                        )
 
         return kb
 
@@ -185,11 +233,8 @@ if __name__ == "__main__":
     from prompt_toolkit import Application
     from prompt_toolkit.key_binding import KeyPressEvent
 
-    from ..tests.dummy_service import DummyEamisService
-
     kb = KeyBindings()
-    service = DummyEamisService()
-    view = MainView(service, bus=EventBus())
+    view = MainView(bus=EventBus())
 
     @kb.add("c-c")
     def _(event: KeyPressEvent):

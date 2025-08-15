@@ -40,6 +40,7 @@ class DummyEamisService(EamisService):
                 "Please ensure the file exists."
             )
         logger.info(f"Loading test data from {self.data_path}")
+        sleep(random.uniform(0, 3.0))  # Simulate network delay
         return pl.read_json(self.data_path)
 
     # --- Override network-bound methods ---
@@ -58,19 +59,20 @@ class DummyEamisService(EamisService):
     def postlogin_response(self) -> httpx.Response:
         """Returns a mock response."""
         logger.info("Mimicking post-login response.")
+        sleep(random.uniform(0, 3.0))  # Simulate network delay
         return self.login()
 
     def get_profiles(self) -> list[Profile]:
         """Returns an empty list of profiles."""
         logger.info("Mimicking retrieval of profiles.")
-        sleep(random.random())
+        sleep(random.uniform(0, 3.0))
         logger.info("Get profiles successfully!")
         return []
 
     def get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
         """Returns an empty list of course data."""
         logger.info(f"Mimicking retrieval of course data for profile: {profile}")
-        sleep(random.random())
+        sleep(random.uniform(0, 3.0))
         logger.info("Get course data successfully!")
         return []
 
@@ -120,3 +122,5 @@ class DummyEamisService(EamisService):
                 except Exception as e:
                     logger.error(f"Unexpected error: {e}")
         logger.info("Elect courses successfully!")
+
+dummy_service = DummyEamisService()

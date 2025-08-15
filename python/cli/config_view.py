@@ -26,7 +26,6 @@ from rich.panel import Panel
 from rich.text import Text
 
 from ..config import CONFIG_PATH, create_config, load_config
-from ..service import EamisService
 from ..shared import AppEvent, EventBus
 from .base_view import View
 
@@ -58,9 +57,8 @@ class PasswordValidator(Validator):
 class ConfigView(View):
     """Configuration Interface for account setup"""
 
-    def __init__(self, service: EamisService, bus: EventBus) -> None:
+    def __init__(self, bus: EventBus) -> None:
         super().__init__()
-        self.service = service
         self.bus = bus
 
         # State management
@@ -248,7 +246,7 @@ class ConfigView(View):
                 "• [bold yellow]请输入学号[/bold yellow]",
             ],
             State.PASSWORD: [
-                "• [bold yellow]请输入密码（密码将被隐藏）[/bold yellow]",
+                "• [bold yellow]请输入密码：[/bold yellow]",
                 "• 系统仅保存加密后的密码",
                 "• 密文与原密码功能相同，请勿泄露配置文件",
             ],
@@ -347,8 +345,6 @@ if __name__ == "__main__":
     # Following lines are for testing purposes only.
     from prompt_toolkit import Application
 
-    from ..tests.dummy_service import DummyEamisService
-
     kb = KeyBindings()
     bus = EventBus()
 
@@ -357,7 +353,7 @@ if __name__ == "__main__":
         """Pressing Ctrl-C will exit the application."""
         event.app.exit()
 
-    view = ConfigView(DummyEamisService(), bus)
+    view = ConfigView(bus)
     app = Application(
         layout=view.layout,
         full_screen=True,
