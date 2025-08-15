@@ -187,15 +187,6 @@ if __name__ == "__main__":
 
     from ..tests.dummy_service import DummyEamisService
 
-    def on_start():
-        view.add_log("Navigating to Election view…")
-
-    def on_settings():
-        view.add_log("Opening Settings…")
-
-    def on_exit():
-        view.add_log("Exit requested. Press Ctrl+C to quit.")
-
     kb = KeyBindings()
     service = DummyEamisService()
     view = MainView(service, bus=EventBus())

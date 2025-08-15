@@ -2,6 +2,7 @@
 Presenter for the whole SchedulEase application.
 """
 
+from argparse import ArgumentParser
 from enum import Enum, auto
 
 from prompt_toolkit import Application
@@ -31,13 +32,14 @@ class MainApp(Application):
         self.schedule_view = ScheduleView(service, self.bus)
         self.config_view = ConfigView(service, self.bus)
         self.main_view = MainView(service, self.bus)
-        super().__init__(layout=self.main_view.layout, **kwargs)
         self.lookup: dict[State, View] = {
             State.ELECTION: self.election_view,
             State.SCHEDULE: self.schedule_view,
             State.CONFIG: self.config_view,
         }
-        self.key_bindings = self.get_keybindings()
+        super().__init__(
+            layout=self.main_view.layout, key_bindings=self.get_keybindings(), **kwargs
+        )
         self.register()
         self.state = State.MAIN
 
@@ -83,8 +85,39 @@ class MainApp(Application):
         return kb
 
 
-if __name__ == "__main__":
+def work():
+    """Main entry point using real EamisService."""
+    from .config import load_config
+
+    config = load_config()
+    service = EamisService(config)
+
+    app = MainApp(service=service, full_screen=True)
+    app.run()
+
+
+def test():
+    """Test entry point using DummyEamisService."""
     from .tests.dummy_service import DummyEamisService
 
-    app = MainApp(service=DummyEamisService(), full_screen=True)
+    service = DummyEamisService()
+
+    app = MainApp(service=service, full_screen=True)
     app.run()
+
+
+def main():
+    parser = ArgumentParser(description="SchedulEase CLI")
+    parser.add_argument(
+        "--test", action="store_true", help="Run SchedulEase in test mode."
+    )
+
+    args = parser.parse_args()
+    if args.test:
+        test()
+    else:
+        work()
+
+
+if __name__ == "__main__":
+    main()

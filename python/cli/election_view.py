@@ -197,7 +197,7 @@ class ElectionView(View):
             content=FormattedTextControl(
                 text=self._get_rich_content(
                     Text.from_markup(
-                        "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Ctrl+X[/bold green]: [bold]删除课程[/bold]  • [bold yellow]Ctrl+S[/bold yellow]: [bold]下一步[/bold]",
+                        "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Backspace[/bold green]: [bold]删除课程[/bold]  • [bold yellow]Ctrl+S[/bold yellow]: [bold]下一步[/bold]",
                     )
                 ),
             ),
@@ -230,32 +230,29 @@ class ElectionView(View):
                 key_bindings=self._get_local_kb(),
             )
         )
-        self._focus_index = 0
+        self.focus_index = 0
 
     def _get_local_kb(self) -> KeyBindings:
         kb = KeyBindings()
 
         @kb.add("left")
         def _left(event):
-            self._focus_index -= 1
+            self.focus_index -= 1
 
         @kb.add("right")
         def _right(event):
-            self._focus_index += 1
+            self.focus_index += 1
 
         @kb.add(
             "backspace",
-            "delete",
             eager=True,
             filter=Condition(lambda: self.layout.has_focus(self.election_list)),
         )
         def _backspace(event):
-            if self._focus_index == 0:
+            if self.focus_index == 0:
                 return None
-            self.curriculum.remove_course(
-                self.curriculum.courses[self._focus_index - 1]
-            )
-            self._focus_index -= 1
+            self.curriculum.remove_course(self.curriculum.courses[self.focus_index - 1])
+            self.focus_index -= 1
 
         @kb.add("c-s")
         def _c_s(event):
@@ -341,7 +338,7 @@ class ElectionView(View):
 
         renderables.append(Text("Selected Courses:", style="bold green"))
         for i, course in enumerate(self.curriculum.courses, 1):
-            if i == self._focus_index:
+            if i == self.focus_index:
                 line = Text(
                     f" › {i}. {course.name} - {'; '.join(course.teachers)}",
                     style="cyan bold",
@@ -402,15 +399,15 @@ class ElectionView(View):
             self.layout.focus(self.election_list)
 
     @property
-    def _focus_index(self) -> int:
+    def focus_index(self) -> int:
         """Get the current focus index.
 
         focus_index = 0: input field
         focus_index > 0: election list, index corresponds to the course in the list"""
         return self._focus_index
 
-    @_focus_index.setter
-    def _focus_index(self, value: int) -> None:
+    @focus_index.setter
+    def focus_index(self, value: int) -> None:
         self._focus_index = value % (len(self.curriculum.courses) + 1)
         self._update_focus(self._focus_index)
 

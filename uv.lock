@@ -1389,12 +1389,18 @@ dependencies = [
     { name = "schedule" },
 ]
 
+[package.optional-dependencies]
+dev = [
+    { name = "jupyter" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "hjson", specifier = ">=3.1.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.1.1" },
     { name = "lxml", specifier = ">=6.0.0" },
     { name = "pathlib", specifier = ">=1.0.1" },
     { name = "polars", specifier = ">=1.31.0" },
@@ -1403,6 +1409,7 @@ requires-dist = [
     { name = "rich", specifier = ">=14.0.0" },
     { name = "schedule", specifier = ">=1.2.2" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "send2trash"

@@ -8,7 +8,6 @@ dependencies = [
     "bs4>=0.0.2",
     "hjson>=3.1.0",
     "httpx>=0.28.1",
-    "jupyter>=1.1.1", # only for reading dev notes, not strictly required
     "lxml>=6.0.0",
     "pathlib>=1.0.1",
     "polars>=1.31.0",
@@ -17,3 +16,12 @@ dependencies = [
     "rich>=14.0.0",
     "schedule>=1.2.2",
 ]
+
+[project.optional-dependencies]
+dev = ["jupyter>=1.1.1"]
+
+[tool.setuptools]
+package-dir = { "schedulease" = "python" }
+
+[project.scripts]
+schedulease = "schedulease.main:main"
