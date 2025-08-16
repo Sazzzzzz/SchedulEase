@@ -1,0 +1,2868 @@
+[
+    {
+        "id": 598198,
+        "name": "情境口语交流",
+        "code": "ENTD0065",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "肖雁",
+            "吴楠"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            }
+        ]
+    },
+    {
+        "id": 598197,
+        "name": "学术英语听说",
+        "code": "ENTD0070",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "简悦",
+            "沈海波"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼212"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼212"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼212"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼212"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "在线教学"
+            }
+        ]
+    },
+    {
+        "id": 598192,
+        "name": "中外文明交流与互鉴",
+        "code": "FORE0782",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "王凯"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台七教小礼堂"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台七教小礼堂"
+            }
+        ]
+    },
+    {
+        "id": 598188,
+        "name": "AI驱动的数据管理与知识图谱",
+        "code": "INTL0001",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "张瑶"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 2,
+                "rooms": "八里台商学院A602"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台商学院A602"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台商学院A602"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台商学院A602"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台商学院A602"
+            }
+        ]
+    },
+    {
+        "id": 598173,
+        "name": "凝聚态中的先进量子力学技术",
+        "code": "INTL0005",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "Jolyon Aarons",
+            "李婧迪"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼318"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼318"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼318"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼318"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼318"
+            }
+        ]
+    },
+    {
+        "id": 598174,
+        "name": "生物有机化学",
+        "code": "INTL0006",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "马飞贺"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台主楼122"
+            }
+        ]
+    },
+    {
+        "id": 598201,
+        "name": "国际贸易与经济政策前沿",
+        "code": "INTL0008",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "但佳丽"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 7,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            }
+        ]
+    },
+    {
+        "id": 598180,
+        "name": "长期经济增长：计量观察与理论探索",
+        "code": "INTL0009",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "郭少宇"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            }
+        ]
+    },
+    {
+        "id": 598203,
+        "name": "国际发展前沿",
+        "code": "INTL0010",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "郭少宇"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台圆阶202"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台圆阶202"
+            }
+        ]
+    },
+    {
+        "id": 598189,
+        "name": "生物医学统计方法",
+        "code": "INTL0012",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "金哲振"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台范孙楼122"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台范孙楼122"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台范孙楼122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台范孙楼122"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台范孙楼122"
+            }
+        ]
+    },
+    {
+        "id": 598204,
+        "name": "四海皆有诗——身体、音乐、影像转译古典诗词大师工作坊",
+        "code": "INTL0014",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "马春靓",
+            "张静",
+            "陈晓耘",
+            "闫晓铮"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 2,
+                "startUnit": 9,
+                "endUnit": 10,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 9,
+                "endUnit": 10,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 9,
+                "endUnit": 10,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台范孙楼518"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 9,
+                "endUnit": 10,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 9,
+                "endUnit": 10,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台学活103"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "八里台学活103"
+            }
+        ]
+    },
+    {
+        "id": 598193,
+        "name": "英语科技论文写作",
+        "code": "INTL0015",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "BARTLAM MARK GERRARD",
+            "刘瑞华"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 6,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "八里台主楼122"
+            }
+        ]
+    },
+    {
+        "id": 598194,
+        "name": "人体胚胎学和发育生物学",
+        "code": "INTL0016",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "王树景"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台主楼112"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台主楼112"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台主楼112"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台主楼112"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "八里台主楼112"
+            }
+        ]
+    },
+    {
+        "id": 598195,
+        "name": "基础细胞生物学",
+        "code": "INTL0017",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "孙圣怡"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼231"
+            }
+        ]
+    },
+    {
+        "id": 598208,
+        "name": "面向未来的化学：可持续未来的新化学技术",
+        "code": "INTL0021",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "李博"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 6,
+                "startUnit": 1,
+                "endUnit": 2,
+                "rooms": "八里台主楼218"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 3,
+                "rooms": "八里台主楼218"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 3,
+                "rooms": "八里台主楼218"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 3,
+                "rooms": "八里台主楼218"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 3,
+                "rooms": "八里台主楼218"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 3,
+                "rooms": "八里台主楼218"
+            }
+        ]
+    },
+    {
+        "id": 598211,
+        "name": "细胞膜与细胞骨架生物学",
+        "code": "INTL0027",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "李芃"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台主楼122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台主楼122"
+            }
+        ]
+    },
+    {
+        "id": 598230,
+        "name": "可计算性、随机性和 K-平凡性",
+        "code": "INTL0035",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "GAO SU"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            }
+        ]
+    },
+    {
+        "id": 598231,
+        "name": "Gromov随机性和关于群的模型论",
+        "code": "INTL0036",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "丁龙云"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台数学第一报告厅"
+            }
+        ]
+    },
+    {
+        "id": 598232,
+        "name": "因果推理与系统理论及其应用",
+        "code": "INTL0037",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "江一鸣"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第二报告厅"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台数学第二报告厅"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台数学第二报告厅"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "八里台数学第二报告厅"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第二报告厅"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台数学第二报告厅"
+            }
+        ]
+    },
+    {
+        "id": 598215,
+        "name": "数学国际前沿选讲",
+        "code": "INTL0038",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "史永堂"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台数学第一报告厅"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台数学第一报告厅"
+            }
+        ]
+    },
+    {
+        "id": 598243,
+        "name": "肿瘤流行病学现状及展望",
+        "code": "INTL0043",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "申天宇"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 6,
+                "startUnit": 8,
+                "endUnit": 9,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 8,
+                "endUnit": 9,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 2,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 2,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台主楼340"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 2,
+                "rooms": "八里台主楼340"
+            }
+        ]
+    },
+    {
+        "id": 598218,
+        "name": "基因、大脑与行为：解码脑健康与脑疾病的分子密码",
+        "code": "INTL0047",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "金鑫"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "八里台主楼211"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼211"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼211"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼211"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台主楼211"
+            }
+        ]
+    },
+    {
+        "id": 598169,
+        "name": "生命科学实验技术专题",
+        "code": "LIFE0159",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "王宏刚"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "八里台综合实验楼B503"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "八里台综合实验楼B503"
+            }
+        ]
+    },
+    {
+        "id": 598163,
+        "name": "服务学习：中华诗教的传承与实践",
+        "code": "UPEC0790",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "张静",
+            "闫晓铮"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598162,
+        "name": "服务学习：影像与社会",
+        "code": "UPEC0800",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "刘帅"
+        ],
+        "campusName": "八里台校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,八里台范孙楼430A"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,八里台范孙楼430A"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,八里台范孙楼430A"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,八里台范孙楼430A"
+            }
+        ]
+    },
+    {
+        "id": 598200,
+        "name": "现代控制工程实训",
+        "code": "COMP0196",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "许丽"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598205,
+        "name": "实践教学",
+        "code": "HIST0052",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "邓玲玲",
+            "彭贺超",
+            "曲强",
+            "任耀星",
+            "张叶"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598179,
+        "name": "双碳背景下环境未来发展国际前沿",
+        "code": "INTL0007",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "刘雨",
+            "张晓媛"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南公教楼C区114"
+            }
+        ]
+    },
+    {
+        "id": 598196,
+        "name": "历史分期、科学革命与中国现代化：多维视野下的文明转型",
+        "code": "INTL0011",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "沈雪晨"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南历史学院237"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南历史学院237"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南历史学院237"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南历史学院237"
+            }
+        ]
+    },
+    {
+        "id": 598190,
+        "name": "药学前沿专题——天然产物合成与药物发现中的有机化学关键概念",
+        "code": "INTL0013",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "吴茜"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区113"
+            }
+        ]
+    },
+    {
+        "id": 598220,
+        "name": "康德的道德形而上学",
+        "code": "INTL0019",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "王建军"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南哲学院楼103"
+            }
+        ]
+    },
+    {
+        "id": 598199,
+        "name": "数字魔法：影音动画的技术与创新",
+        "code": "INTL0020",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "左朝园"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南秀山堂101"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南秀山堂101"
+            }
+        ]
+    },
+    {
+        "id": 598241,
+        "name": "比较哲学与东西方对话",
+        "code": "INTL0022",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "Misha Tadd"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南哲学院楼103"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南哲学院楼103"
+            }
+        ]
+    },
+    {
+        "id": 598206,
+        "name": "宏观政策与金融市场",
+        "code": "INTL0023",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "陈凯迹",
+            "蔡耀辉"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南金融学院336"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "津南金融学院336"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南金融学院336"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "津南金融学院336"
+            }
+        ]
+    },
+    {
+        "id": 598207,
+        "name": "资产定价与ESG投资",
+        "code": "INTL0024",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "汤勇军",
+            "韩冰"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南金融学院336"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "津南金融学院336"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南金融学院336"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "津南金融学院336"
+            }
+        ]
+    },
+    {
+        "id": 598210,
+        "name": "人工智能导论",
+        "code": "INTL0025",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "ZHANG JIE"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区113"
+            }
+        ]
+    },
+    {
+        "id": 598209,
+        "name": "人工智能、计算智能与数据分析的新兴前沿技术",
+        "code": "INTL0026",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "谢程昕"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 6,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区126"
+            }
+        ]
+    },
+    {
+        "id": 598221,
+        "name": "智能软件前沿",
+        "code": "INTL0028",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "朱锦潮"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": 1,
+        "expLessonGroup": 6480,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598212,
+        "name": "热力学导论",
+        "code": "INTL0029",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "张昊"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 7,
+                "startUnit": 9,
+                "endUnit": 11,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 12,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 9,
+                "endUnit": 11,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "在线教学"
+            }
+        ]
+    },
+    {
+        "id": 598214,
+        "name": "美国的印太战略与东亚政策",
+        "code": "INTL0030",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "黄海涛"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区218"
+            }
+        ]
+    },
+    {
+        "id": 598213,
+        "name": "国际小学期前沿讲座课程",
+        "code": "INTL0031",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "刘伟伟"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 7,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 2,
+                "endUnit": 3,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 5,
+                "rooms": "津南公教楼C区218"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 3,
+                "rooms": "在线教学"
+            }
+        ]
+    },
+    {
+        "id": 598219,
+        "name": "密码与网络空间安全国际前沿技术",
+        "code": "INTL0032",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "范玲玲"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区122"
+            }
+        ]
+    },
+    {
+        "id": 598223,
+        "name": "马克思之后的马克思主义",
+        "code": "INTL0033",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "ROCCO LACORTE"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "在线教学"
+            }
+        ]
+    },
+    {
+        "id": 598222,
+        "name": "国际人权法前沿：工商业与人权",
+        "code": "INTL0034",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "唐颖侠"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 7,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南法学院楼123"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南法学院楼123"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南法学院楼123"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南法学院楼123"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南法学院楼123"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南法学院楼123"
+            }
+        ]
+    },
+    {
+        "id": 598225,
+        "name": "视觉新维度：从生物眼到未来“视”界",
+        "code": "INTL0039",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "张涵瑜"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 6,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区115"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区115"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区115"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区115"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区115"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区115"
+            }
+        ]
+    },
+    {
+        "id": 598217,
+        "name": "重大传染病与人类历史拐点",
+        "code": "INTL0040",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "刘赵昆"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 7,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区113"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区113"
+            }
+        ]
+    },
+    {
+        "id": 598224,
+        "name": "人工智能机器人：入门与应用",
+        "code": "INTL0041",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "贾浩"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 7,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "津南公教楼C区114"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 12,
+                "rooms": "津南公教楼C区114"
+            }
+        ]
+    },
+    {
+        "id": 598216,
+        "name": "Introduction to Food Science and Human Nutrition (食品科学与人类营养学导论)",
+        "code": "INTL0042",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "吕莹爽"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 6,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区127"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区127"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区127"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区127"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区127"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 11,
+                "endUnit": 13,
+                "rooms": "津南公教楼C区127"
+            }
+        ]
+    },
+    {
+        "id": 598226,
+        "name": "人工智能在医学和健康医疗中的前沿应用，方法及挑战",
+        "code": "INTL0044",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "范登平"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 1,
+                "endUnit": 5,
+                "rooms": "津南公教楼C区122"
+            }
+        ]
+    },
+    {
+        "id": 598227,
+        "name": "三维数字资产版权保护前沿技术",
+        "code": "INTL0045",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "范登平"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 10,
+                "rooms": "津南公教楼C区122"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 1,
+                "endUnit": 5,
+                "rooms": "津南公教楼C区122"
+            }
+        ]
+    },
+    {
+        "id": 598228,
+        "name": "先进功能材料前沿：从多孔框架设计到超快光磁调控",
+        "code": "INTL0048",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "李朝阳"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南材料学院楼130"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南材料学院楼130"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南材料学院楼130"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "津南材料学院楼130"
+            }
+        ]
+    },
+    {
+        "id": 598258,
+        "name": "策略品牌及收益管理",
+        "code": "INTL0049",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "外聘教师"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 4,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 7,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 6,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 1,
+                "endUnit": 4,
+                "rooms": "津南旅游学院楼219"
+            }
+        ]
+    },
+    {
+        "id": 598234,
+        "name": "可持续旅游与研究方法",
+        "code": "INTL0050",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "姜玉婷"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南旅游学院楼219"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 8,
+                "rooms": "津南旅游学院楼219"
+            }
+        ]
+    },
+    {
+        "id": 598233,
+        "name": "枢纽中国：全球移民网络中的基础设施·移民社群·跨境实践",
+        "code": "INTL0051",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "王炳钰"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南周政学院楼144"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 8,
+                "endUnit": 10,
+                "rooms": "津南周政学院楼144"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南周政学院楼144"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 8,
+                "endUnit": 10,
+                "rooms": "津南周政学院楼144"
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": "津南周政学院楼144"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 8,
+                "endUnit": 10,
+                "rooms": "津南周政学院楼144"
+            }
+        ]
+    },
+    {
+        "id": 598176,
+        "name": "创新研究与训练",
+        "code": "SOFT0018",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "陈锐"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": 1,
+        "expLessonGroup": 6442,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598177,
+        "name": "软件工程专业课导论",
+        "code": "SOFT0060",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "谢茂强",
+            "邢树松",
+            "刘明铭",
+            "王斌辉",
+            "张玉志",
+            "TIAN JUN",
+            "ZHANG HAINING"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": 1,
+        "expLessonGroup": 6443,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598175,
+        "name": "企业实训",
+        "code": "SOFT0188",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "沈舒尹"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": 1,
+        "expLessonGroup": 6440,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598175,
+        "name": "企业实训",
+        "code": "SOFT0188",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "沈舒尹"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": 2,
+        "expLessonGroup": 6441,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598178,
+        "name": "高级语言编程实训2",
+        "code": "SOFT0215",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "沈舒尹"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": 1,
+        "expLessonGroup": 6444,
+        "arrangeInfo": [
+            {
+                "weekDay": 1,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": ""
+            },
+            {
+                "weekDay": 1,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": ""
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": ""
+            },
+            {
+                "weekDay": 5,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": ""
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 7,
+                "endUnit": 9,
+                "rooms": ""
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 2,
+                "endUnit": 4,
+                "rooms": ""
+            }
+        ]
+    },
+    {
+        "id": 598164,
+        "name": "服务学习：中华诗教的传承与实践",
+        "code": "UPEC0790",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "张静",
+            "闫晓铮"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": []
+    },
+    {
+        "id": 598191,
+        "name": "服务学习：心理与社会",
+        "code": "UPEC1291",
+        "profileId": "1234",
+        "profileUrl": "https://eamis.nankai.edu.cn/fake_profile",
+        "teachers": [
+            "王晓娟"
+        ],
+        "campusName": "津南校区",
+        "expLessonGroupNo": null,
+        "expLessonGroup": null,
+        "arrangeInfo": [
+            {
+                "weekDay": 5,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,津南大通E305"
+            },
+            {
+                "weekDay": 4,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,津南大通E305"
+            },
+            {
+                "weekDay": 3,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,津南大通E305"
+            },
+            {
+                "weekDay": 2,
+                "startUnit": 3,
+                "endUnit": 4,
+                "rooms": "教学基地,津南大通E305"
+            }
+        ]
+    }
+]

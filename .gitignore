@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # Custom files
-reference/
+_reference/
 test.*
 .DS_Store
 data/

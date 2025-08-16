@@ -1,18 +1,20 @@
+import logging
+import random
+from concurrent.futures import Future, ThreadPoolExecutor
 from functools import cached_property
 from pathlib import Path
+from time import sleep
 from typing import Any
-from concurrent.futures import ThreadPoolExecutor, Future
+
 import httpx
 import polars as pl
-import random
-from python.service import EamisService, Profile
-import logging
-from time import sleep
 
-from ..shared import Course
 from ..config import load_config
+from ..service import EamisService, Profile
+from ..shared import Course
 
 logger = logging.getLogger(__name__)
+
 
 # The entire class for simulation application-wide
 class DummyEamisService(EamisService):
@@ -28,7 +30,7 @@ class DummyEamisService(EamisService):
         to avoid needing a real config or httpx.Client.
         """
         self.config = config
-        self.data_path = Path(__file__).parent.parent / "data" / "output.json"
+        self.data_path = Path(__file__).parent / "test_data.json"
         logger.info(f"Dummy service initialized, Using test data from {self.data_path}")
 
     @cached_property
@@ -128,5 +130,6 @@ class DummyEamisService(EamisService):
                 except Exception as e:
                     logger.error(f"Unexpected error: {e}")
         logger.info("Elect courses successfully!")
+
 
 dummy_service = DummyEamisService(config=load_config())
