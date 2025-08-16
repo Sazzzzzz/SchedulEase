@@ -106,6 +106,8 @@ class EamisService:
 
     def __init__(self, config: dict[str, Any]) -> None:
         self.client = httpx.Client()
+        # Hold a reference to config for views to use
+        self.config = config
         self.account: str = config["user"]["account"]
         self.encrypted_password: str = config["user"]["encrypted_password"]
 
@@ -235,7 +237,7 @@ class EamisService:
         soup = BeautifulSoup(course_elect_menu_response.content, "lxml")
         # Check if the course election menu is available
         if soup.find(string=re.compile(r"无法选课")):
-            raise ServiceError("Course election menu is currently not available.")
+            raise ServiceError("选课界面不可用，可能是因为选课时间未到或已结束。")
         # TODO: Add logic when course election menu is not available
         selection_divs = soup.find_all("div", id=re.compile(r"^electIndexNotice\d+$"))
 
@@ -358,25 +360,19 @@ class EamisService:
                 case text if "选课成功" in text:
                     return None
                 case text if "当前选课不开放" in text:
-                    raise ElectError("Course election is currently not open.")
+                    raise ElectError("当前选课不开放")
                 case text if "已经选过" in text:
-                    raise ElectError(f"Course {course.name} is already elected.")
+                    raise ElectError("该课程已被选中")
                 case text if "计划外名额已满" in text:
-                    raise ElectError(
-                        f"Course {course.name} is considered as extra and has no available spots."
-                    )
+                    raise ElectError("该课程被视为计划外，已无可用名额。")
                 case _:
-                    raise ElectError(
-                        f"Failed to elect course {course.name}. Response: {text}"
-                    )
+                    raise ElectError(f"课程选课失败。响应: {text}")
         else:  # Cancel operation
             match text := soup.get_text():
                 case text if "退课成功" in text:
                     return None
                 case _:
-                    raise ElectError(
-                        f"Failed to cancel course {course.name}. Response: {text}"
-                    )
+                    raise ElectError(f"课程退课失败。响应: {text}")
 
     # TODO: Use contextlib.suppress for error handling
     # TODO: Add logging for better error tracking
@@ -399,13 +395,11 @@ class EamisService:
                 )
                 for course in courses
             )
-            for future in results:
+            for idx, future in enumerate(results):
                 try:
                     future.result()
-                except ElectError as e:
-                    logger.error(f"Error electing course: {e}")
                 except Exception as e:
-                    logger.error(f"Unexpected error: {e}")
+                    logger.error(f"选课 {courses[idx].name} 失败: {e}")
 
     # ---- Course Information Processing ----
     @staticmethod

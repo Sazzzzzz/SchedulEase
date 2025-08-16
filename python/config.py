@@ -36,6 +36,12 @@ Sec-Ch-Ua-Platform = '"macOS"'
 [user]
 account = "{account}"
 encrypted_password = "{encrypted_password}"
+
+# --- Application Settings ---
+# General application settings go here.
+[settings]
+# This option controls the logging level users see at schedule page
+log_level = "INFO"
 """
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()

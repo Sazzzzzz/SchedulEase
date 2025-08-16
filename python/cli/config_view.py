@@ -211,7 +211,7 @@ class ConfigView(View):
         )
         def _enter(event: KeyPressEvent):
             if self.state is State.COMPLETE:
-                self.bus.publish(AppEvent.RETURN_TO_MAIN)
+                self.bus.publish(AppEvent.CONFIG_CONFIRMED)
 
         return kb
 
@@ -247,8 +247,8 @@ class ConfigView(View):
             ],
             State.PASSWORD: [
                 "• [bold yellow]请输入密码：[/bold yellow]",
-                "• 系统仅保存加密后的密码",
-                "• 密文与原密码功能相同，请勿泄露配置文件",
+                "• 该密码将仅用于教务网站登录",
+                "• 为保护您的隐私，请勿泄露配置文件",
             ],
             State.CONFIRM: [
                 "• [bold yellow]请再次输入密码以确认[/bold yellow]",
@@ -257,7 +257,7 @@ class ConfigView(View):
             State.COMPLETE: [
                 "[bold green]✓ 配置已成功保存！[/bold green]",
                 f"• 其余设置可在配置文件[italic cyan]{CONFIG_PATH}[/italic cyan]中手动编辑",
-                "• 您现在可以继续选课",
+                "• 请重新进入程序以加载配置",
             ],
         }
 

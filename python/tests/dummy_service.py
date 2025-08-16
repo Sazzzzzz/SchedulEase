@@ -9,11 +9,12 @@ from python.service import EamisService, Profile
 import logging
 from time import sleep
 
-from python.shared import Course
+from ..shared import Course
+from ..config import load_config
 
 logger = logging.getLogger(__name__)
 
-
+# The entire class for simulation application-wide
 class DummyEamisService(EamisService):
     """
     A dummy EamisService for testing purposes.
@@ -21,11 +22,12 @@ class DummyEamisService(EamisService):
     and mimics network methods to return empty/mock responses.
     """
 
-    def __init__(self):
+    def __init__(self, config: dict[str, Any]):
         """
         Initializes the dummy service. Bypasses the parent EamisService constructor
         to avoid needing a real config or httpx.Client.
         """
+        self.config = config
         self.data_path = Path(__file__).parent.parent / "data" / "output.json"
         logger.info(f"Dummy service initialized, Using test data from {self.data_path}")
 
@@ -34,14 +36,7 @@ class DummyEamisService(EamisService):
         """
         Overrides the parent property to load course information from a local JSON file.
         """
-        if not self.data_path.exists():
-            raise FileNotFoundError(
-                f"Could not find test data at '{self.data_path}'. "
-                "Please ensure the file exists."
-            )
-        logger.info(f"Loading test data from {self.data_path}")
-        sleep(random.uniform(0, 3.0))  # Simulate network delay
-        return pl.read_json(self.data_path)
+        return self.get_all_course_info()
 
     # --- Override network-bound methods ---
 
@@ -52,34 +47,45 @@ class DummyEamisService(EamisService):
 
     def login(self) -> httpx.Response:
         """Returns a mock successful login response."""
+        sleep(random.uniform(0, 2.0))  # Simulate network delay
         logger.info("Mimicking successful login.")
         return httpx.Response(200, text="Mock login successful")
 
     @cached_property
     def postlogin_response(self) -> httpx.Response:
         """Returns a mock response."""
-        logger.info("Mimicking post-login response.")
-        sleep(random.uniform(0, 3.0))  # Simulate network delay
         return self.login()
+
+    @cached_property
+    def profiles(self) -> list[Profile]:
+        """Returns a list of profiles."""
+        return self.get_profiles()
 
     def get_profiles(self) -> list[Profile]:
         """Returns an empty list of profiles."""
         logger.info("Mimicking retrieval of profiles.")
-        sleep(random.uniform(0, 3.0))
+        sleep(random.uniform(0, 2.0))
         logger.info("Get profiles successfully!")
         return []
 
     def get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
         """Returns an empty list of course data."""
         logger.info(f"Mimicking retrieval of course data for profile: {profile}")
-        sleep(random.uniform(0, 3.0))
+        sleep(random.uniform(0, 1.0))
         logger.info("Get course data successfully!")
         return []
 
     def get_all_course_info(self) -> pl.DataFrame:
         """Returns the DataFrame from the local file."""
         logger.info("Mimicking retrieval of all course information.")
-        return self.course_info
+        if not self.data_path.exists():
+            raise FileNotFoundError(
+                f"Could not find test data at '{self.data_path}'. "
+                "Please ensure the file exists."
+            )
+        logger.info(f"Loading test data from {self.data_path}")
+        sleep(random.uniform(0, 2.5))  # Simulate network delay
+        return pl.read_json(self.data_path)
 
     def elect_course(
         self,
@@ -123,4 +129,4 @@ class DummyEamisService(EamisService):
                     logger.error(f"Unexpected error: {e}")
         logger.info("Elect courses successfully!")
 
-dummy_service = DummyEamisService()
+dummy_service = DummyEamisService(config=load_config())

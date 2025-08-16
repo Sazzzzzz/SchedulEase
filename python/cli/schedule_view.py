@@ -41,11 +41,11 @@ logger = logging.getLogger(__name__)
 
 class LoggerMixin(View):
     # TODO: Add doc
-    def __init__(self):
+    def __init__(self, level: str):
         super().__init__()
         self.logger = logger
         logging.basicConfig(
-            level="NOTSET",
+            level=level,
             format="%(message)s",
             datefmt="[%X]",
             handlers=[
@@ -88,7 +88,9 @@ class ScheduleView(View):
         super().__init__()
         self.service = service
         self.bus = bus
-        self.logger = LoggerMixin()
+        self.logger = LoggerMixin(
+            self.service.config.get("settings", {}).get("log_level", "NOTSET")
+        )
 
         # State management
         self._state = State.PREINPUT
@@ -297,15 +299,20 @@ class ScheduleView(View):
             status = "✅ Election has been scheduled"
             remaining = "🎯 Manual Test has happened"
             status_color = "yellow"
-        elif (
-            sec := (self.target_datetime - now).total_seconds()
-        ) > 0 and self.state is State.POSTINPUT:
-            hours, remainder = divmod(int(sec), 3600)
-            minutes, seconds = divmod(remainder, 60)
-            countdown = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-            status = f"⏰ Election scheduled for: {self.target_datetime.strftime('%Y-%m-%d %H:%M')}"
-            remaining = f"⏳ Time remaining: {countdown}"
-            status_color = "green"
+        elif (sec := (self.target_datetime - now).total_seconds()) > 0:
+            if self.state is State.POSTINPUT:
+                hours, remainder = divmod(int(sec), 3600)
+                minutes, seconds = divmod(remainder, 60)
+                countdown = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                status = f"⏰ Election scheduled for: {self.target_datetime.strftime('%Y-%m-%d %H:%M')}"
+                remaining = f"⏳ Time remaining: {countdown}"
+                status_color = "green"
+            elif self.state is State.RUNNING:
+                status = "✅ Election has been scheduled"
+                remaining = "🎯 Manual Test has happened"
+                status_color = "yellow"
+            else:
+                raise RuntimeError("Unknown state")
         elif sec <= 0:
             status = "✅ Scheduled time has passed"
             remaining = "🎯 Election should have been triggered"
@@ -445,13 +452,13 @@ class ScheduleView(View):
 if __name__ == "__main__":
     from prompt_toolkit import Application
 
-    from ..tests.dummy_service import DummyEamisService
+    from ..tests.dummy_service import dummy_service
 
-    service = DummyEamisService()
     test_courses = [
-        Course.from_row(row, service) for row in service.course_info.head(5).to_dicts()
+        Course.from_row(row, dummy_service)
+        for row in dummy_service.course_info.head(5).to_dicts()
     ]  # Take some rows
-    view = ScheduleView(service, EventBus())
+    view = ScheduleView(dummy_service, EventBus())
     view.set_courses(test_courses)  # Set courses for scheduling
 
     kb = KeyBindings()

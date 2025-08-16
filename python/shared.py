@@ -217,6 +217,8 @@ class AppEvent(Enum):
 
     ELECTION_CONFIRMED = auto()
 
+    CONFIG_CONFIRMED = auto()
+
     APP_NO_CONFIG = auto()
     APP_OK = auto()
 

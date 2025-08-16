@@ -2,6 +2,7 @@
 View object responsible for displaying and managing the course election process.
 """
 
+from enum import Enum, auto
 import re
 from itertools import combinations
 from typing import Any, Generator, Optional
@@ -32,6 +33,11 @@ from rich.text import Text
 from ..service import EamisService
 from ..shared import AppEvent, Course, EventBus, Weekdays
 from .base_view import View
+
+
+class State(Enum):
+    NORMAL = auto()
+    CONFLICT = auto()
 
 
 class CourseCompleter(Completer):
@@ -145,6 +151,8 @@ class ElectionView(View):
         self.service = service
         self.bus = bus
         self.curriculum = Curriculum()
+        self.state = State.NORMAL
+        self.error_message = ""
         self.create_layout()
 
     def create_layout(self):
@@ -184,6 +192,17 @@ class ElectionView(View):
             ]
         )
         self.error_toolbar = ValidationToolbar()
+        self.error_message_box = ConditionalContainer(
+            Window(
+                content=FormattedTextControl(
+                    lambda: self.error_message,
+                    style="bold red",
+                ),
+                height=1,
+                wrap_lines=True,
+            ),
+            filter=Condition(lambda: self.error_message != ""),
+        )
         self.conditional_separator = ConditionalContainer(
             self.separator,
             filter=Condition(lambda: len(self.curriculum.courses) > 0),
@@ -194,13 +213,7 @@ class ElectionView(View):
         )
         self.shortcuts = Window(
             height=2,
-            content=FormattedTextControl(
-                text=self._get_rich_content(
-                    Text.from_markup(
-                        "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Backspace[/bold green]: [bold]删除课程[/bold]  • [bold yellow]Ctrl+S[/bold yellow]: [bold]下一步[/bold]",
-                    )
-                ),
-            ),
+            content=FormattedTextControl(self._get_shortcuts),
         )
         self.completions_menu = CompletionsMenu(max_height=12, scroll_offset=1)
         self.main = HSplit(
@@ -211,6 +224,7 @@ class ElectionView(View):
                 self.conditional_separator,
                 self.prompt,
                 self.input_panel,
+                self.error_message_box,
                 self.shortcuts,
                 self.error_toolbar,
             ]
@@ -235,18 +249,21 @@ class ElectionView(View):
     def _get_local_kb(self) -> KeyBindings:
         kb = KeyBindings()
 
-        @kb.add("left")
+        @kb.add("left", filter=Condition(lambda: self.state is State.NORMAL))
         def _left(event):
             self.focus_index -= 1
 
-        @kb.add("right")
+        @kb.add("right", filter=Condition(lambda: self.state is State.NORMAL))
         def _right(event):
             self.focus_index += 1
 
         @kb.add(
             "backspace",
             eager=True,
-            filter=Condition(lambda: self.layout.has_focus(self.election_list)),
+            filter=Condition(
+                lambda: self.layout.has_focus(self.election_list)
+                and self.state is State.NORMAL
+            ),
         )
         def _backspace(event):
             if self.focus_index == 0:
@@ -254,11 +271,43 @@ class ElectionView(View):
             self.curriculum.remove_course(self.curriculum.courses[self.focus_index - 1])
             self.focus_index -= 1
 
-        @kb.add("c-s")
+        @kb.add("c-s", filter=Condition(lambda: self.state is State.NORMAL))
         def _c_s(event):
+            if not self.curriculum.courses:
+                self.error_message = "请至少选择一门课程！"
+                return None
+            if self.curriculum.conflicts:
+                self.error_message = "课程存在冲突！若要坚持选课，可能会造成选课失败。"
+                self.state = State.CONFLICT
+                return None
             self.bus.publish(AppEvent.ELECTION_CONFIRMED, self.curriculum.courses)
 
+        @kb.add("y", filter=Condition(lambda: self.state is State.CONFLICT))
+        def _y(event):
+            self.state = State.NORMAL
+            self.error_message = ""
+            self.bus.publish(AppEvent.ELECTION_CONFIRMED, self.curriculum.courses)
+
+        @kb.add("n", filter=Condition(lambda: self.state is State.CONFLICT))
+        def _n(event):
+            self.state = State.NORMAL
+            self.error_message = ""
+
         return kb
+
+    def _get_shortcuts(self) -> ANSI:
+        if self.state is State.NORMAL:
+            return self._get_rich_content(
+                Text.from_markup(
+                    "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Backspace[/bold green]: [bold]删除课程[/bold]  • [bold yellow]Ctrl+S[/bold yellow]: [bold]下一步[/bold]",
+                )
+            )
+        else:
+            return self._get_rich_content(
+                Text.from_markup(
+                    "• [bold red]N[/bold red]: [bold]返回修改[/bold]  • [bold green]Y[/bold green]: [bold]确定选课[/bold]",
+                )
+            )
 
     def _get_curriculum_table(self, classes: int = 14) -> ANSI:
         """
@@ -414,6 +463,7 @@ class ElectionView(View):
     def add_course(self, buffer: Buffer) -> bool:
         """Adds a course to the curriculum based on user input."""
         course = Course.from_input(buffer.text, self.service)
+        self.error_message = ""
         return not self.curriculum.add_course(course)
 
 
@@ -423,7 +473,7 @@ if __name__ == "__main__":
     from prompt_toolkit import Application
     from prompt_toolkit.key_binding import KeyPressEvent
 
-    from ..tests.dummy_service import DummyEamisService
+    from ..tests.dummy_service import dummy_service
 
     kb = KeyBindings()
 
@@ -432,7 +482,7 @@ if __name__ == "__main__":
         """Pressing Ctrl-C will exit the application."""
         event.app.exit()
 
-    view = ElectionView(DummyEamisService(), EventBus())
+    view = ElectionView(dummy_service, EventBus())
     app = Application(
         layout=view.layout,
         full_screen=True,
