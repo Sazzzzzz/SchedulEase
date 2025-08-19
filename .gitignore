@@ -16,6 +16,7 @@ test.*
 data/
 .vscode/
 .github/
+.env
 
 # Rust build artifacts
 target/
