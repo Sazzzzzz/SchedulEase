@@ -97,7 +97,7 @@ class MainApp(Application):
 
             self.bus.publish(AppEvent.APP_NO_CONFIG)
 
-            assert config is not None
+        assert config is not None
         self.config = config
         # Check for test arg
         if test:
@@ -144,6 +144,10 @@ class MainApp(Application):
         self.add_log("尝试使用缓存信息进行设置", LogLevel.INFO)
         try:
             self.service = CachedService(self.config)
+        except FileNotFoundError:
+            self.add_log("未找到缓存文件", LogLevel.ERROR)
+            self.add_log("无法获取课程信息，仅账户设置模式可用", LogLevel.INFO)
+            return None
         except Exception as e:
             self.add_log(f"无法使用缓存信息进行设置: {e}", LogLevel.ERROR)
             self.add_log("无法获取课程信息，仅账户设置模式可用", LogLevel.INFO)

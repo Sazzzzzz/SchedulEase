@@ -6,6 +6,12 @@ dist/
 wheels/
 *.egg-info
 
+# Nuitka build artifacts
+*.build/
+*.dist/
+*.onefile-build/
+nuitka-crash-report.xml
+
 # Virtual environments
 .venv
 

@@ -256,6 +256,8 @@ class EamisService:
         # Check if the course election menu is available
         if soup.find(string=re.compile(r"无法选课")):
             raise ServiceError("选课界面不可用，可能是因为选课时间未到或已结束。")
+        elif soup.find(string=re.compile(r"去缴费")):
+            raise ServiceError("有未缴纳的费用，选课界面不可用。")
         # TODO: Add logic when course election menu is not available
         selection_divs = soup.find_all("div", id=re.compile(r"^electIndexNotice\d+$"))
 
@@ -344,7 +346,7 @@ class EamisService:
 
     def save_course_info(self):
         file = DATA_PATH / "course_info.json"
-        with open(file, "x", encoding="utf-8") as f:
+        with open(file, "w", encoding="utf-8") as f:
             self.course_info.write_json(f)
 
     # There will be only private method from here
