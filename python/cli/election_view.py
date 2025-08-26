@@ -30,7 +30,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..service import EamisService
+from ..service import Service
 from ..shared import AppEvent, Course, EventBus, Weekdays
 from .base_view import View
 
@@ -45,7 +45,7 @@ class CourseCompleter(Completer):
     A custom completer for courses that fuzzy searches course names and teacher names.
     """
 
-    def __init__(self, service: EamisService):
+    def __init__(self, service: Service):
         self.service = service
         self.candidates = [
             Course.from_row(row, service) for row in service.course_info.to_dicts()
@@ -73,7 +73,7 @@ class CourseCompleter(Completer):
 
 
 class CourseValidator(Validator):
-    def __init__(self, service: EamisService):
+    def __init__(self, service: Service):
         self.service = service
 
     def validate(self, document) -> None:
@@ -145,7 +145,7 @@ class ElectionView(View):
     # TODO: add feature to save current course list
     """Election Interface"""
 
-    def __init__(self, service: EamisService, bus: EventBus) -> None:
+    def __init__(self, service: Service, bus: EventBus) -> None:
         super().__init__()
         # Backend service
         self.service = service
@@ -153,7 +153,14 @@ class ElectionView(View):
         self.curriculum = Curriculum()
         self.state = State.NORMAL
         self.error_message = ""
+        self.register()
         self.create_layout()
+
+    def register(self):
+        self.bus.subscribe(AppEvent.APP_NO_SCHEDULE_VIEW, self.on_no_schedule_view)
+
+    def on_no_schedule_view(self):
+        self.error_message = "预览模式下无法进入选课界面"
 
     def create_layout(self):
         self.completer = CourseCompleter(self.service)

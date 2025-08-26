@@ -45,7 +45,8 @@ log_level = "INFO"
 """
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()
-CONFIG_PATH = SCRIPT_DIR / "data" / "config.toml"
+DATA_PATH = SCRIPT_DIR / "data"
+CONFIG_PATH = DATA_PATH / "config.toml"
 
 
 # Adapted from the original code
@@ -83,5 +84,6 @@ def load_config() -> dict[str, Any]:
         )
     with open(CONFIG_PATH, "rb") as f:
         return tomllib.load(f)
+
 
 # TODO: Consider add test login function to verify credentials

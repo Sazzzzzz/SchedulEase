@@ -12,7 +12,7 @@ import polars as pl
 # ----- Utilities for Core Services -----
 
 if TYPE_CHECKING:
-    from python.service import EamisService
+    from python.service import Service
 
 
 class Weekdays(Enum):
@@ -77,12 +77,12 @@ class Course:
     # Every Course instance will have a reference to father service
     # This is to avoid hidden dependencies on the EamisService on class level
     # And the memory overhead is negligible
-    service: EamisService = field(repr=False, hash=False, compare=False)
+    service: Service = field(repr=False, hash=False, compare=False)
 
     # These are two factories to create a Course instance
     # Actually `@classmethod` and `@staticmethod` are interchangeable here because no inheritance is used
     @classmethod
-    def from_input(cls, query: str, service: EamisService) -> Course:
+    def from_input(cls, query: str, service: Service) -> Course:
         """
         Create a Course instance from a query string.
         The query string should be in the format "[id]" or "[id:groupNo]".
@@ -114,7 +114,7 @@ class Course:
         return Course.from_row(row[0], service)
 
     @classmethod
-    def from_row(cls, row: dict[str, Any], service: EamisService) -> Self:
+    def from_row(cls, row: dict[str, Any], service: Service) -> Self:
         """
         Create a Course instance from a Polars DataFrame row.
         """
@@ -220,6 +220,7 @@ class AppEvent(Enum):
     CONFIG_CONFIRMED = auto()
 
     APP_NO_CONFIG = auto()
+    APP_NO_SCHEDULE_VIEW = auto()
     APP_OK = auto()
 
 class EventBus:

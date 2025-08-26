@@ -38,7 +38,7 @@ class DummyEamisService(EamisService):
         """
         Overrides the parent property to load course information from a local JSON file.
         """
-        return self.get_all_course_info()
+        return self._get_all_course_info()
 
     # --- Override network-bound methods ---
 
@@ -47,7 +47,7 @@ class DummyEamisService(EamisService):
         logger.info("Mimicking successful initial connection.")
         pass
 
-    def login(self) -> httpx.Response:
+    def _login(self) -> httpx.Response:
         """Returns a mock successful login response."""
         sleep(random.uniform(0, 2.0))  # Simulate network delay
         logger.info("Mimicking successful login.")
@@ -56,28 +56,28 @@ class DummyEamisService(EamisService):
     @cached_property
     def postlogin_response(self) -> httpx.Response:
         """Returns a mock response."""
-        return self.login()
+        return self._login()
 
     @cached_property
     def profiles(self) -> list[Profile]:
         """Returns a list of profiles."""
-        return self.get_profiles()
+        return self._get_profiles()
 
-    def get_profiles(self) -> list[Profile]:
+    def _get_profiles(self) -> list[Profile]:
         """Returns an empty list of profiles."""
         logger.info("Mimicking retrieval of profiles.")
         sleep(random.uniform(0, 2.0))
         logger.info("Get profiles successfully!")
         return []
 
-    def get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
+    def _get_course_data(self, profile: Profile) -> list[dict[str, Any]]:
         """Returns an empty list of course data."""
         logger.info(f"Mimicking retrieval of course data for profile: {profile}")
         sleep(random.uniform(0, 1.0))
         logger.info("Get course data successfully!")
         return []
 
-    def get_all_course_info(self) -> pl.DataFrame:
+    def _get_all_course_info(self) -> pl.DataFrame:
         """Returns the DataFrame from the local file."""
         logger.info("Mimicking retrieval of all course information.")
         if not self.data_path.exists():

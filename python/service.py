@@ -18,6 +18,7 @@ from typing import (
     Any,
     Callable,
     Iterable,
+    Protocol,
     NamedTuple,
     ParamSpec,
     TypeAlias,
@@ -29,7 +30,7 @@ import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
-from .config import load_config
+from .config import load_config, DATA_PATH
 from .shared import Course
 
 # API URLs
@@ -71,6 +72,23 @@ class Profile(NamedTuple):
 CourseInfo: TypeAlias = dict[str, Any]
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
+
+class Service(Protocol):
+    """Protocol for EAMIS service. Only assuring method for querying, not for course election"""
+
+    def initial_connection(self) -> None: ...
+
+    @cached_property
+    def postlogin_response(self) -> httpx.Response: ...
+
+    # even profiles is not necessary...
+    @cached_property
+    def profiles(self) -> list[Profile]: ...
+
+    @cached_property
+    def course_info(self) -> pl.DataFrame: ...
 
 
 class EamisService:
@@ -136,9 +154,9 @@ class EamisService:
     @cached_property
     def postlogin_response(self) -> httpx.Response:
         """Cached property to store the response after login."""
-        return self.login()
+        return self._login()
 
-    def login(self):
+    def _login(self):
         """Login to EAMIS service.
 
         Known response codes:
@@ -214,9 +232,9 @@ class EamisService:
 
         This invokes login method.
         """
-        return self.get_profiles()
+        return self._get_profiles()
 
-    def get_profiles(self) -> list[Profile]:
+    def _get_profiles(self) -> list[Profile]:
         """Fetch all election categories available to the user."""
         try:
             course_elect_menu_response = self.client.get(
@@ -270,7 +288,7 @@ class EamisService:
 
         return course_categories
 
-    def get_course_data(self, profile: Profile) -> list[CourseInfo]:
+    def _get_course_data(self, profile: Profile) -> list[CourseInfo]:
         """
         Fetch course data for a specific profile.
         """
@@ -312,18 +330,24 @@ class EamisService:
 
         This invokes profile method and in turn invokes login.
         """
-        return self.get_all_course_info()
+        return self._get_all_course_info()
 
-    def get_all_course_info(self) -> pl.DataFrame:
+    def _get_all_course_info(self) -> pl.DataFrame:
         """Fetch all course information for the user."""
 
         all_course_info = chain.from_iterable(
-            self.get_course_data(profile) for profile in self.profiles
+            self._get_course_data(profile) for profile in self.profiles
         )
 
         df = EamisService.create_dataframe(all_course_info)
         return df
 
+    def save_course_info(self):
+        file = DATA_PATH / "course_info.json"
+        with open(file, "x", encoding="utf-8") as f:
+            self.course_info.write_json(f)
+
+    # There will be only private method from here
     # ---- Course Election ----
     def elect_course(
         self, course: Course, operation: Operation = Operation.ELECT
@@ -536,6 +560,56 @@ class EamisService:
         now = datetime.now()
         timestamp = int(now.timestamp() * 1000)
         return timestamp
+
+
+class CachedService:
+    """
+    A local service that loads data from cached info file.
+    """
+
+    def __init__(self, config: dict[str, Any]):
+        self.config = config
+        self.data_path = DATA_PATH / "course_info.json"
+        # Get course_info at initialization to ensure it's available
+        self.course_info
+
+    @cached_property
+    def course_info(self) -> pl.DataFrame:
+        return self._get_all_course_info()
+
+    # --- Override network-bound methods ---
+
+    def initial_connection(self) -> None:
+        pass
+
+    def _login(self) -> httpx.Response:
+        logger.info("Mimicking successful login.")
+        return httpx.Response(200, text="Mock login successful")
+
+    @cached_property
+    def postlogin_response(self) -> httpx.Response:
+        return self._login()
+
+    @cached_property
+    def profiles(self) -> list[Profile]:
+        """Returns a list of profiles."""
+        return self._get_profiles()
+
+    def _get_profiles(self) -> list[Profile]:
+        """Returns an empty list of profiles."""
+        logger.info("Mimicking retrieval of profiles.")
+        return []
+
+    def _get_all_course_info(self) -> pl.DataFrame:
+        """Returns the DataFrame from the local file."""
+        logger.info("Mimicking retrieval of all course information.")
+        if not self.data_path.exists():
+            raise FileNotFoundError(
+                f"Could not find test data at '{self.data_path}'. "
+                "Please ensure the file exists."
+            )
+        logger.info(f"Loading test data from {self.data_path}")
+        return pl.read_json(self.data_path)
 
 
 if __name__ == "__main__":

@@ -15,9 +15,11 @@ from .cli.election_view import ElectionView
 from .cli.main_view import LogLevel, MainView
 from .cli.schedule_view import ScheduleView
 from .config import CONFIG_PATH, load_config
-from .service import EamisService
+from .service import CachedService, EamisService
 from .shared import AppEvent, Course, EventBus
 
+class SetupError(Exception):
+    """Raised when there is connection error with actual backend service"""
 
 class Page(Enum):
     MAIN = auto()
@@ -41,7 +43,7 @@ class MainApp(Application):
         self.register()
         self._state = Page.MAIN
         self.layout = self.main_view.layout
-        threading.Thread(target=self.check_status, args=(test,), daemon=True).start()
+        threading.Thread(target=self.setup, args=(test,), daemon=True).start()
 
     @property
     def state(self):
@@ -63,7 +65,15 @@ class MainApp(Application):
 
         self.bus.subscribe(AppEvent.ELECTION_CONFIRMED, self.on_election_confirmed)
 
-    def check_status(self, test: bool) -> None:
+    # ----- Startup Utilities -----
+
+    def setup(self, test: bool) -> None:
+        try:
+            self.basic_setup(test)
+        except SetupError:
+            self.setup_with_cached_info()
+
+    def basic_setup(self, test: bool) -> None:
         # Check for config
         config = None
         try:
@@ -72,12 +82,14 @@ class MainApp(Application):
                 f"成功加载配置 [italic cyan]{CONFIG_PATH}[/italic cyan]",
                 level=LogLevel.SUCCESS,
             )
-        except Exception:
+        except FileNotFoundError:
             self.add_log(
                 f"无法从 [italic cyan]{CONFIG_PATH}[/italic cyan] 加载配置，请先设置账户",
                 LogLevel.ERROR,
             )
             return None
+        except Exception as e:
+            self.add_log(f"加载配置时发生错误: {e}", LogLevel.ERROR)
         finally:
             self.config_view = ConfigView(self.bus)
             # Prevent bug from empty lookup dictionary
@@ -86,40 +98,64 @@ class MainApp(Application):
             self.bus.publish(AppEvent.APP_NO_CONFIG)
 
             assert config is not None
+        self.config = config
+        # Check for test arg
         if test:
             from .tests.dummy_service import DummyEamisService
 
             self.service = DummyEamisService(config)
         else:
             self.service = EamisService(config)
+
         # Check for connection
         try:
             self.service.initial_connection()
             self.add_log("成功与网站建立连接", LogLevel.SUCCESS)
         except Exception as e:
             self.add_log(f"连接失败: {e}", LogLevel.ERROR)
-            return None
+            raise SetupError from e
 
-        # login
+        # Login
         try:
             self.service.postlogin_response
             self.add_log("成功登录", LogLevel.SUCCESS)
         except Exception as e:
             self.add_log(f"连接失败: {e}", LogLevel.ERROR)
-            return None
+            raise SetupError from e
+
         # Load course info
         try:
             self.service.course_info
             self.add_log("成功加载课程信息", LogLevel.SUCCESS)
+            self.service.save_course_info()
+            self.add_log("成功保存课程信息", LogLevel.SUCCESS)
         except Exception as e:
             self.add_log(f"加载课程信息失败: {e}", LogLevel.ERROR)
-            return None
+            raise SetupError from e
         self.election_view = ElectionView(self.service, self.bus)
         self.schedule_view = ScheduleView(self.service, self.bus)
         self.lookup[Page.ELECTION] = self.election_view
         self.lookup[Page.SCHEDULE] = self.schedule_view
         self.bus.publish(AppEvent.APP_OK)
         self.add_log("应用程序已准备就绪", LogLevel.INFO)
+
+    def setup_with_cached_info(self):
+        """Continue setting up the application with cached information."""
+        self.add_log("尝试使用缓存信息进行设置", LogLevel.INFO)
+        try:
+            self.service = CachedService(self.config)
+        except Exception as e:
+            self.add_log(f"无法使用缓存信息进行设置: {e}", LogLevel.ERROR)
+            self.add_log("无法获取课程信息，仅账户设置模式可用", LogLevel.INFO)
+            return None
+
+        self.election_view = ElectionView(self.service, self.bus)
+        self.lookup[Page.ELECTION] = self.election_view
+        self.bus.publish(AppEvent.APP_OK)
+        self.add_log("成功发现缓存信息！应用程序已准备就绪", LogLevel.SUCCESS)
+        self.add_log(
+            "[bold red]注意[/bold red]：缓存模式下无法进入选课界面", LogLevel.INFO
+        )
 
     def add_log(self, message: str, level: LogLevel = LogLevel.INFO):
         self.main_view.add_log(message, level)
@@ -137,6 +173,9 @@ class MainApp(Application):
         self.exit()
 
     def on_election_confirmed(self, courses: list[Course]):
+        if self.lookup.get(Page.SCHEDULE) is None:
+            self.bus.publish(AppEvent.APP_NO_SCHEDULE_VIEW)
+            return None
         self.schedule_view.set_courses(courses)
         self.state = Page.SCHEDULE
 
