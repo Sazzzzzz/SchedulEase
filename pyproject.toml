@@ -18,7 +18,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["jupyter>=1.1.1"]
+dev = [
+    "jupyter>=1.1.1",
+    "nuitka>=2.7.13",
+]
 
 [tool.setuptools]
 package-dir = { "schedulease" = "python" }
