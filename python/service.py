@@ -237,7 +237,7 @@ class EamisService:
     def _get_profiles(self) -> list[Profile]:
         """Fetch all election categories available to the user."""
         try:
-            course_elect_menu_response = self.client.get(
+            self.course_elect_menu_response = self.client.get(
                 PROFILE_URL,
                 headers={
                     "Referer": str(self.postlogin_response.url),
@@ -252,7 +252,7 @@ class EamisService:
             raise ConnectionError(
                 f"An unknown error occurred while fetching course election menu: {e}"
             ) from e
-        soup = BeautifulSoup(course_elect_menu_response.content, "lxml")
+        soup = BeautifulSoup(self.course_elect_menu_response.content, "lxml")
         # Check if the course election menu is available
         if soup.find(string=re.compile(r"无法选课")):
             raise ServiceError("选课界面不可用，可能是因为选课时间未到或已结束。")
@@ -294,6 +294,19 @@ class EamisService:
         """
         Fetch course data for a specific profile.
         """
+        # First fetch the profile main page
+        # This is CRUCIAL for getting course data otherwise Internal Server Error will occur
+        try:
+            self.client.get(
+                profile.url,
+                headers={
+                    "Referer": str(self.course_elect_menu_response.url),
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            )
+        except Exception as e:
+            raise ConnectionError(f"Failed to fetch profile main page: {e}") from e
+
         try:
             course_info = self.client.get(
                 COURSE_INFO_URL,
@@ -319,10 +332,16 @@ class EamisService:
             assert paragraph is not None, "Paragraph element not found"
             info = paragraph.get_text(strip=True).split("=", 1)[-1].strip()[:-1]
         except Exception as e:
+            if "请不要过快点击" in course_info_parsed.get_text():
+                raise ServiceError("因请求过于频繁发生错误，请重新加载页面。") from e
+
             raise ParseError(
                 f"Failed to parse course info: {e}. Likely due to changes in the API return structure."
             ) from e
         raw_data = cast(list[CourseInfo], hjson.loads(info))
+
+        sleep(self.config["settings"].get("profile_delay_time", 0.25))
+
         return EamisService.process_raw_data(raw_data, profile)
 
     @cached_property
@@ -360,8 +379,9 @@ class EamisService:
         This is not dependent on `profile` and `course_info` properties. Relying only on `self.client`.
         """
         opt = str(operation.value).lower()
+        opt = "true"
         # FIXME: This might not be the correct way to handle expLessonGroup
-        expGroup = course.expLessonGroup if course.expLessonGroup else "_"
+        expGroup = course.expLessonGroup if course.expLessonGroup else "undefined"
         try:
             elect_response = self.client.post(
                 ELECT_URL,
@@ -506,7 +526,9 @@ class EamisService:
             all_expanded_rows.extend(expanded)
 
         # Convert back to DataFrame
-        return pl.DataFrame(all_expanded_rows)
+        return pl.DataFrame(
+            all_expanded_rows, infer_schema_length=len(all_expanded_rows)
+        )
 
     @staticmethod
     def create_dataframe(data: Iterable[CourseInfo]) -> pl.DataFrame:
@@ -617,17 +639,4 @@ class CachedService:
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
-    # service.course_info
-    import json
-
-    test_profile = Profile(
-        title="TestProfile",
-        url=httpx.URL("https://eamis.nankai.edu.cn/fake_profile"),
-        id="1234",
-    )
-    with open("test.json", "x", encoding="utf-8") as f:
-        data = json.load(f)
-    df = EamisService.create_dataframe(
-        EamisService.process_raw_data(data, test_profile)
-    )
-    df.write_json("data/output.json")
+    print(service.course_info)

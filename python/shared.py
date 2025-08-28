@@ -48,7 +48,14 @@ class Duration(NamedTuple):
     def overlaps(duration1: Duration, duration2: Duration) -> bool:
         """
         Check if two durations overlap.
+        A duration with start=0 and end=0 represents no scheduled class,
+        so it never overlaps with any other duration.
         """
+        # If either duration represents no scheduled class, there's no overlap
+        # if (duration1.start == 0 and duration1.end == 0) or (
+        #     duration2.start == 0 and duration2.end == 0
+        # ):
+        #     return False
         return duration1.start <= duration2.end and duration2.start <= duration1.end
 
     @staticmethod
@@ -56,7 +63,7 @@ class Duration(NamedTuple):
         """
         Return a default Duration that does not overlap with any other.
         """
-        return Duration(start=0, end=0)
+        return Duration(start=0, end=-1)
 
 
 @dataclass(frozen=True)

@@ -296,26 +296,26 @@ class ScheduleView(View):
         """Display current scheduling status."""
         now = datetime.now()
         if self.target_datetime is None:
-            status = "✅ Election has been scheduled"
-            remaining = "🎯 Manual Test has happened"
+            status = "✅ 选课请求已发送！"
+            remaining = "🎯 请求由手动触发"
             status_color = "yellow"
         elif (sec := (self.target_datetime - now).total_seconds()) > 0:
             if self.state is State.POSTINPUT:
                 hours, remainder = divmod(int(sec), 3600)
                 minutes, seconds = divmod(remainder, 60)
                 countdown = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                status = f"⏰ Election scheduled for: {self.target_datetime.strftime('%Y-%m-%d %H:%M')}"
-                remaining = f"⏳ Time remaining: {countdown}"
+                status = f"⏰ 选课请求计划于: {self.target_datetime.strftime('%Y-%m-%d %H:%M')}"
+                remaining = f"⏳ 剩余时间: {countdown}"
                 status_color = "green"
             elif self.state is State.RUNNING:
-                status = "✅ Election has been scheduled"
-                remaining = "🎯 Manual Test has happened"
+                status = "✅ 选课请求已发送！"
+                remaining = "🎯 请求由手动触发"
                 status_color = "yellow"
             else:
                 raise RuntimeError("Unknown state")
         elif sec <= 0:
-            status = "✅ Scheduled time has passed"
-            remaining = "🎯 Election should have been triggered"
+            status = "✅ 选课请求已发送！"
+            remaining = "🎯 计划的选课时间已过去"
             status_color = "yellow"
         else:
             raise RuntimeError("Unknown state")
