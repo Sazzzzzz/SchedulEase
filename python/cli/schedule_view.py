@@ -53,11 +53,12 @@ class LoggerMixin(View):
             ],
         )
 
-    def get_log(self) -> ANSI:
+    def get_log(self, lines: int) -> ANSI:
         """
-        Returns the captured logs as ANSI formatted text.
+        Returns the last lines of captured logs as ANSI formatted text.
         """
-        return ANSI(self.io.getvalue())
+        log_lines = self.io.getvalue().splitlines()[-lines:]
+        return ANSI("\n".join(log_lines))
 
 
 class State(Enum):
@@ -337,7 +338,7 @@ class ScheduleView(View):
     def _get_log_panel(self) -> ANSI:
         """Display scheduling and execution logs using rich logging."""
 
-        return self.logger.get_log()
+        return self.logger.get_log(self.service.config["settings"].get("log_lines", 0))
 
     def _get_shortcuts(self) -> ANSI:
         """Display control instructions."""
@@ -435,8 +436,23 @@ class ScheduleView(View):
 
         implementing the "fire and forget" mechanism"""
         logger.debug("🚀 Starting course election process (async)...")
-        # Run blocking sync code in a thread
-        await asyncio.to_thread(self.service.elect_courses, self.courses)
+
+        for i, course in enumerate(self.courses):
+            if i > 0:
+                await asyncio.sleep(
+                    self.service.config["settings"].get("course_delay", 0)
+                )
+            try:
+                logger.info(
+                    f"🎯 Attempting to elect course {i + 1}/{len(self.courses)}: {course.name}"
+                )
+                await asyncio.to_thread(
+                    self.service.elect_course, course, self.service.Operation.ELECT
+                )
+                logger.info(f"✅ Successfully elected course: {course.name}")
+            except Exception as e:
+                logger.error(f"❌ 选课 {course.name} 失败: {e}")
+
         logger.debug("🎉 Course election completed!")
         schedule.clear("election")
 

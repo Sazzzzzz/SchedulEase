@@ -40,12 +40,14 @@ encrypted_password = "{encrypted_password}"
 # --- Application Settings ---
 # General application settings go here.
 [settings]
-# This option controls the logging level users see at schedule page
+# delay time between requests of different course profiles
+profile_delay = 0.5
+# maximum number allowed to finish all course election requests
+course_delay = 0.5
+# logging level users see at schedule page
 log_level = "INFO"
-# This option controls the delay time between requests of different course profiles
-profile_delay_time = 0.5
-# This option controls the maximum number allowed to finish all course election requests
-max_requests_delay = 3
+# number of log lines to display in the UI
+log_lines = 16
 """
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()

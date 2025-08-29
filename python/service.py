@@ -25,6 +25,7 @@ from typing import (
     TypeVar,
     cast,
 )
+from typing_extensions import deprecated
 
 import hjson
 import httpx
@@ -340,7 +341,7 @@ class EamisService:
             ) from e
         raw_data = cast(list[CourseInfo], hjson.loads(info))
 
-        sleep(self.config["settings"].get("profile_delay_time", 0.25))
+        sleep(self.config["settings"].get("profile_delay", 0))
 
         return EamisService.process_raw_data(raw_data, profile)
 
@@ -401,20 +402,21 @@ class EamisService:
             raise ConnectionError(f"Failed to elect course: {e}") from e
 
         soup = BeautifulSoup(elect_response.content, "lxml")
+        text = (
+            soup.get_text()
+            .strip()
+            .replace("\n", " ")
+            .replace("\r", " ")
+            .replace("\t", " ")
+        )
         if operation == EamisService.Operation.ELECT:
-            match text := soup.get_text():
-                case text if "选课成功" in text:
+            match text:
+                case text if "成功" in text:
                     return None
-                case text if "当前选课不开放" in text:
-                    raise ElectError("当前选课不开放")
-                case text if "已经选过" in text:
-                    raise ElectError("该课程已被选中")
-                case text if "计划外名额已满" in text:
-                    raise ElectError("该课程被视为计划外，已无可用名额。")
                 case _:
                     raise ElectError(f"课程选课失败。响应: {text}")
         else:  # Cancel operation
-            match text := soup.get_text():
+            match text:
                 case text if "退课成功" in text:
                     return None
                 case _:
@@ -422,6 +424,8 @@ class EamisService:
 
     # TODO: Use contextlib.suppress for error handling
     # TODO: Add logging for better error tracking
+
+    @deprecated("This method is deprecated since it creates 'Click too fast' issue")
     def elect_courses(self, courses: list[Course], max_delay: float = 0) -> None:
         """
         Elect multiple courses with optional delay.
