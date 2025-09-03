@@ -87,7 +87,7 @@ class DummyEamisService(EamisService):
             )
         logger.info(f"Loading test data from {self.data_path}")
         sleep(random.uniform(0, 2.5))  # Simulate network delay
-        return pl.read_json(self.data_path)
+        return pl.read_json(self.data_path, infer_schema_length=None)
 
     def elect_course(
         self,

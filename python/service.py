@@ -319,8 +319,7 @@ class EamisService:
             )
         except Exception as e:
             raise ConnectionError(f"Failed to fetch course info: {e}") from e
-        course_info_parsed = BeautifulSoup(course_info.content, "lxml")
-        try:
+        # try:
             # Previous logic used to parse the course info for future reference:
             # info = (
             #     course_info_parsed.find("body")
@@ -329,10 +328,16 @@ class EamisService:
             #     .split("=", 1)[-1]
             #     .strip()
             # )[:-1]
-            paragraph = course_info_parsed.select_one("body > p")
-            assert paragraph is not None, "Paragraph element not found"
-            info = paragraph.get_text(strip=True).split("=", 1)[-1].strip()[:-1]
+        # paragraph = course_info_parsed.select_one("body > p")
+        # if paragraph is None:
+        #     return []
+
+        # EAMIS only returns js code now...
+        try:
+            info = course_info.content.decode("utf-8").split("=", 1)[-1].strip()[:-1]
         except Exception as e:
+            course_info_parsed = BeautifulSoup(course_info.content, "lxml")
+
             if "请不要过快点击" in course_info_parsed.get_text():
                 raise ServiceError("因请求过于频繁发生错误，请重新加载页面。") from e
 
