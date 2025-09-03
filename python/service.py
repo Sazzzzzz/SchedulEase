@@ -381,7 +381,6 @@ class EamisService:
         """
         opt = str(operation.value).lower()
         opt = "true"
-        # FIXME: This might not be the correct way to handle expLessonGroup
         expGroup = course.expLessonGroup if course.expLessonGroup else "undefined"
         try:
             elect_response = self.client.post(
@@ -637,8 +636,10 @@ class CachedService:
                 "Please ensure the file exists."
             )
         logger.info(f"Loading test data from {self.data_path}")
-        return pl.read_json(self.data_path)
+        return pl.read_json(self.data_path, infer_schema_length=None)
 
+        # TODO: Serialize requests
+        # TODO: Change order of selected courses
 
 if __name__ == "__main__":
     config = load_config()

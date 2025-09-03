@@ -285,7 +285,7 @@ class ScheduleView(View):
             "• 使用24小时制 (HH:MM)，例如：14:30，08:00",
             "• 如果该时间点已经过去，将安排于明天",
             "• Ctrl+S 将立刻向服务器发送选课请求",
-            # TODO: add color
+            "• 请务必使用英文冒号分割小时与分钟",
         ]
 
         text = Text()

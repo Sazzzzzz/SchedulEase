@@ -7,6 +7,7 @@ from typing import Any
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
+# Consider using pydantic for configuration validation
 DEFAULT_CONFIG_TEMPLATE = """# SchedulEase Configuration File
 
 # --- Request Headers ---
@@ -90,6 +91,3 @@ def load_config() -> dict[str, Any]:
         )
     with open(CONFIG_PATH, "rb") as f:
         return tomllib.load(f)
-
-
-# TODO: Consider add test login function to verify credentials

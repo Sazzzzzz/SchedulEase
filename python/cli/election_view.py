@@ -99,7 +99,6 @@ class Curriculum:
     A container class responsible for storing elected course and conflict analysis.
     """
 
-    # TODO: support deleting course
     def __init__(self, initial_courses: Optional[list[Course]] = None):
         self.courses: list[Course] = initial_courses or []
         self.conflicts: dict[
