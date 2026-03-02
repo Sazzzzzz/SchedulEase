@@ -18,8 +18,10 @@ from .config import CONFIG_PATH, load_config
 from .service import CachedService, EamisService
 from .shared import AppEvent, Course, EventBus
 
+
 class SetupError(Exception):
     """Raised when there is connection error with actual backend service"""
+
 
 class Page(Enum):
     MAIN = auto()

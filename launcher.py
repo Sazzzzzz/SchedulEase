@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Launcher for SchedulEase executable. Used as Nuitka build entrance only.
-Patches runtime paths for onefile and delegates to python.main:main.
+Patches runtime paths for onefile and delegates to main:main.
 """
 
 # Build command
@@ -27,7 +27,7 @@ def _patch_paths() -> None:
         sys.path.insert(0, str(workspace_root))
 
     # Patch config constants before importing main
-    import python.config as config
+    import config as config
 
     data_path = exe_dir / "data"
     config_path = data_path / "config.toml"
@@ -39,7 +39,7 @@ def _patch_paths() -> None:
 
 def main() -> None:
     _patch_paths()
-    from python.main import main as run
+    from main import main as run
 
     run()
 

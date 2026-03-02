@@ -18,13 +18,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "jupyter>=1.1.1",
-    "nuitka>=2.7.13",
-]
+dev = ["jupyter>=1.1.1", "nuitka>=2.7.13"]
 
 [tool.setuptools]
-package-dir = { "schedulease" = "python" }
+package-dir = { "schedulease" = "." }
 
 [project.scripts]
 schedulease = "schedulease.main:main"
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
