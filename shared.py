@@ -12,7 +12,7 @@ import polars as pl
 # ----- Utilities for Core Services -----
 
 if TYPE_CHECKING:
-    from python.service import Service
+    from service import Service
 
 
 class Weekdays(Enum):
@@ -229,6 +229,7 @@ class AppEvent(Enum):
     APP_NO_CONFIG = auto()
     APP_NO_SCHEDULE_VIEW = auto()
     APP_OK = auto()
+
 
 class EventBus:
     def __init__(self):

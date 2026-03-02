@@ -63,6 +63,8 @@
 2. **创建虚拟环境并安装依赖 (推荐使用 `uv`):**
 
     + **使用 `uv`**
+  
+        你基本上只需要`uv sync`即可：
 
         ```bash
         # 创建虚拟环境
@@ -75,7 +77,7 @@
         source .venv/bin/activate
         
         # 安装依赖
-        uv pip install -e .
+        uv sync
         ```
 
     + **使用传统 `pip`:**
@@ -108,7 +110,7 @@
 
 ```bash
 # 使用 uv
-uv pip install -e ".[dev]"
+uv sync --all-extras
 
 # 使用 pip
 pip install -e ".[dev]"
