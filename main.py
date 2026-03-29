@@ -9,11 +9,11 @@ from enum import Enum, auto
 from prompt_toolkit import Application
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 
-from .cli.base_view import View
-from .cli.config_view import ConfigView
-from .cli.election_view import ElectionView
-from .cli.main_view import LogLevel, MainView
-from .cli.schedule_view import ScheduleView
+from .tui.base_view import View
+from .tui.config_view import ConfigView
+from .tui.election_view import ElectionView
+from .tui.main_view import LogLevel, MainView
+from .tui.schedule_view import ScheduleView
 from .config import CONFIG_PATH, load_config
 from .service import CachedService, EamisService
 from .shared import AppEvent, Course, EventBus
@@ -197,7 +197,7 @@ class MainApp(Application):
 
 
 def main():
-    parser = ArgumentParser(description="SchedulEase CLI")
+    parser = ArgumentParser(description="SchedulEase.tui")
     parser.add_argument(
         "--test", action="store_true", help="Run SchedulEase in test mode."
     )
