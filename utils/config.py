@@ -52,7 +52,7 @@ log_lines = 16
 """
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()
-DATA_PATH = SCRIPT_DIR / "data"
+DATA_PATH = SCRIPT_DIR.parent / "data"
 CONFIG_PATH = DATA_PATH / "config.toml"
 
 

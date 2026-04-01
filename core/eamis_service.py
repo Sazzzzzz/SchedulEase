@@ -4,13 +4,13 @@ Core service for interacting with the EAMIS backend.
 
 from __future__ import annotations
 
-from enum import Enum
 import logging
 import random
 import re
 from collections import OrderedDict
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
+from enum import Enum
 from functools import cached_property
 from itertools import chain
 from time import sleep
@@ -18,21 +18,23 @@ from typing import (
     Any,
     Callable,
     Iterable,
-    Protocol,
     NamedTuple,
     ParamSpec,
+    Protocol,
     TypeAlias,
     TypeVar,
     cast,
 )
-from typing_extensions import deprecated
 
 import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
-from ..utils.config import load_config, DATA_PATH
+from typing_extensions import deprecated
+
+from ..utils.config import DATA_PATH, load_config
 from ..utils.shared import Course
+from .exceptions import ElectError, LoginError, ParseError, ServiceError
 
 # API URLs
 LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")
@@ -42,26 +44,6 @@ SITE_URL = EAMIS_URL.join("/eams/homeExt.action")
 PROFILE_URL = EAMIS_URL.join("/eams/stdElectCourse.action")
 COURSE_INFO_URL = EAMIS_URL.join("/eams/stdElectCourse!data.action")
 ELECT_URL = EAMIS_URL.join("/eams/stdElectCourse!batchOperator.action")
-
-
-class ServiceError(Exception):
-    """Base exception for service."""
-
-
-class ConnectionError(ServiceError):
-    """Raised for network or connection-related errors."""
-
-
-class LoginError(ServiceError):
-    """Raised for login-related errors."""
-
-
-class ParseError(ServiceError):
-    """Raised for errors in parsing data from the service, likely due to changes in the API or HTML structure."""
-
-
-class ElectError(ServiceError):
-    """Raised for errors during course election, such as failure to elect or cancel a course."""
 
 
 class Profile(NamedTuple):
