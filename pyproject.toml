@@ -27,7 +27,8 @@ dev = ["jupyter>=1.1.1", "nuitka>=2.7.13"]
 package-dir = { "schedulease" = "." }
 
 [project.scripts]
-schedulease = "schedulease.main:main"
+eamis = "schedulease.tui.main:main"
+libic = "schedulease.cli.main:main"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
