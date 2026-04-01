@@ -31,8 +31,8 @@ import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
-from .config import load_config, DATA_PATH
-from .shared import Course
+from ..utils.config import load_config, DATA_PATH
+from ..utils.shared import Course
 
 # API URLs
 LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")
@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-class Service(Protocol):
+class EamisServiceProtocol(Protocol):
     """Protocol for EAMIS service. Only assuring method for querying, not for course election"""
 
     def initial_connection(self) -> None: ...
@@ -124,13 +124,11 @@ class EamisService:
         CANCEL = False
 
     def __init__(self, config: dict[str, Any]) -> None:
-        self.client = httpx.Client()
         # Hold a reference to config for views to use
         self.config = config
         self.account: str = config["user"]["account"]
         self.encrypted_password: str = config["user"]["encrypted_password"]
-
-        self.client.headers.update(OrderedDict(config["headers"]))
+        self.client = httpx.Client(headers=OrderedDict(config["headers"]))
 
     def initial_connection(self) -> None:
         """
@@ -320,14 +318,14 @@ class EamisService:
         except Exception as e:
             raise ConnectionError(f"Failed to fetch course info: {e}") from e
         # try:
-            # Previous logic used to parse the course info for future reference:
-            # info = (
-            #     course_info_parsed.find("body")
-            #     .find("p")  # type: ignore
-            #     .get_text(strip=True)  # type: ignore
-            #     .split("=", 1)[-1]
-            #     .strip()
-            # )[:-1]
+        # Previous logic used to parse the course info for future reference:
+        # info = (
+        #     course_info_parsed.find("body")
+        #     .find("p")  # type: ignore
+        #     .get_text(strip=True)  # type: ignore
+        #     .split("=", 1)[-1]
+        #     .strip()
+        # )[:-1]
         # paragraph = course_info_parsed.select_one("body > p")
         # if paragraph is None:
         #     return []
@@ -645,6 +643,7 @@ class CachedService:
 
         # TODO: Serialize requests
         # TODO: Change order of selected courses
+
 
 if __name__ == "__main__":
     config = load_config()

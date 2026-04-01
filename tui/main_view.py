@@ -16,7 +16,7 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from ..shared import AppEvent, EventBus
+from ..utils.shared import AppEvent, EventBus
 from .base_view import View
 
 

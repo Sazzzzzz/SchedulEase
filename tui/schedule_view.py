@@ -33,8 +33,8 @@ from rich.table import Table
 from rich.text import Text
 
 from .base_view import View
-from ..service import EamisService
-from ..shared import AppEvent, Course, EventBus
+from ..core.eamis_service import EamisService
+from ..utils.shared import AppEvent, Course, EventBus
 
 logger = logging.getLogger(__name__)
 

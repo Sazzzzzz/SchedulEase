@@ -30,8 +30,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..service import Service
-from ..shared import AppEvent, Course, EventBus, Weekdays
+from ..core.eamis_service import EamisServiceProtocol
+from ..utils.shared import AppEvent, Course, EventBus, Weekdays
 from .base_view import View
 
 
@@ -45,7 +45,7 @@ class CourseCompleter(Completer):
     A custom completer for courses that fuzzy searches course names and teacher names.
     """
 
-    def __init__(self, service: Service):
+    def __init__(self, service: EamisServiceProtocol):
         self.service = service
         self.candidates = [
             Course.from_row(row, service) for row in service.course_info.to_dicts()
@@ -73,7 +73,7 @@ class CourseCompleter(Completer):
 
 
 class CourseValidator(Validator):
-    def __init__(self, service: Service):
+    def __init__(self, service: EamisServiceProtocol):
         self.service = service
 
     def validate(self, document) -> None:
@@ -144,7 +144,7 @@ class ElectionView(View):
     # TODO: add feature to save current course list
     """Election Interface"""
 
-    def __init__(self, service: Service, bus: EventBus) -> None:
+    def __init__(self, service: EamisServiceProtocol, bus: EventBus) -> None:
         super().__init__()
         # Backend service
         self.service = service
@@ -267,8 +267,10 @@ class ElectionView(View):
             "backspace",
             eager=True,
             filter=Condition(
-                lambda: self.layout.has_focus(self.election_list)
-                and self.state is State.NORMAL
+                lambda: (
+                    self.layout.has_focus(self.election_list)
+                    and self.state is State.NORMAL
+                )
             ),
         )
         def _backspace(event):

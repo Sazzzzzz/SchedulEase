@@ -25,8 +25,8 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from ..config import CONFIG_PATH, create_config, load_config
-from ..shared import AppEvent, EventBus
+from ..utils.config import CONFIG_PATH, create_config, load_config
+from ..utils.shared import AppEvent, EventBus
 from .base_view import View
 
 

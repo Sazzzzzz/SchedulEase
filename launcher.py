@@ -27,7 +27,7 @@ def _patch_paths() -> None:
         sys.path.insert(0, str(workspace_root))
 
     # Patch config constants before importing main
-    import config as config
+    import utils.config as config
 
     data_path = exe_dir / "data"
     config_path = data_path / "config.toml"

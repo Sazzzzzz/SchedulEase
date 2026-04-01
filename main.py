@@ -14,9 +14,9 @@ from .tui.config_view import ConfigView
 from .tui.election_view import ElectionView
 from .tui.main_view import LogLevel, MainView
 from .tui.schedule_view import ScheduleView
-from .config import CONFIG_PATH, load_config
-from .service import CachedService, EamisService
-from .shared import AppEvent, Course, EventBus
+from .utils.config import CONFIG_PATH, load_config
+from .core.eamis_service import CachedService, EamisService
+from .utils.shared import AppEvent, Course, EventBus
 
 
 class SetupError(Exception):

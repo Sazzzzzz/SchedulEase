@@ -9,9 +9,9 @@ from typing import Any
 import httpx
 import polars as pl
 
-from ..config import load_config
-from ..service import EamisService, Profile
-from ..shared import Course
+from ..utils.config import load_config
+from ..core.eamis_service import EamisService, Profile
+from ..utils.shared import Course
 
 logger = logging.getLogger(__name__)
 
