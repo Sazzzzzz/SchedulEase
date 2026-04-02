@@ -90,7 +90,7 @@ class ScheduleView(View):
         self.service = service
         self.bus = bus
         self.logger = LoggerMixin(
-            self.service.config.get("settings", {}).get("log_level", "NOTSET")
+            self.service.config.get("eamis_settings", {}).get("log_level", "NOTSET")
         )
 
         # State management
@@ -338,7 +338,9 @@ class ScheduleView(View):
     def _get_log_panel(self) -> ANSI:
         """Display scheduling and execution logs using rich logging."""
 
-        return self.logger.get_log(self.service.config["settings"].get("log_lines", 0))
+        return self.logger.get_log(
+            self.service.config["eamis_settings"].get("log_lines", 0)
+        )
 
     def _get_shortcuts(self) -> ANSI:
         """Display control instructions."""
@@ -440,7 +442,7 @@ class ScheduleView(View):
         for i, course in enumerate(self.courses):
             if i > 0:
                 await asyncio.sleep(
-                    self.service.config["settings"].get("course_delay", 0)
+                    self.service.config["eamis_settings"].get("course_delay", 0)
                 )
             try:
                 logger.info(

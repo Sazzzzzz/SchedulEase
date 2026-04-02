@@ -3,19 +3,21 @@ Core service for interacting with the LIBIC backend.
 """
 
 from __future__ import annotations
+
 import logging
 from collections import OrderedDict
-from datetime import datetime
+from datetime import date, datetime, time
 from typing import Any
 
 import httpx
 from playwright.async_api import async_playwright
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .exceptions import LoginError, ServiceError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 # API URLs
 LIBIC_URL = httpx.URL("https://libic.nankai.edu.cn")
@@ -24,18 +26,24 @@ LIBIC_API = LIBIC_URL.join("ic-web/")
 
 
 class Building(BaseModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     id: str
     name: str
     floors: list["Floor"] = Field(default_factory=list, alias="children")
 
 
 class Floor(BaseModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     id: str
     name: str
     sections: list[Section] = Field(default_factory=list, alias="children")
 
 
 class Section(BaseModel):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     id: str
     name: str
     room_count: int = Field(default=0, alias="totalCount")
@@ -185,6 +193,10 @@ class LibicService:
         """
         Public coordinate for login configuration.
         """
+        try:
+            await self.initial_connection()
+        except Exception as e:
+            raise LoginError(f"Cannot reach LIBIC service for login: {e}") from e
         cookies = await self._playwright_login()
         self.client.cookies.update(cookies)
         self._user_info = await self.get_user_info()
@@ -193,10 +205,19 @@ class LibicService:
         self.client.headers.update({"token": self._user_info["token"], "lan": "1"})
         logger.info("Successfully logged into Libic.")
 
+    @classmethod
+    async def from_login(cls, config: dict[str, Any]) -> LibicService:
+        """
+        LibicService constructor that performs the login flow.
+        """
+        service = cls(config)
+        await service.login()
+        return service
+
     def export_session(self) -> dict[str, Any]:
         """Export the active session data for caching."""
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.timestamp(datetime.now()),
             "cookies": dict(self.client.cookies),
             "token": self.client.headers.get("token", ""),
             "user_info": self._user_info,
@@ -207,6 +228,15 @@ class LibicService:
         self.client.cookies.update(session_data.get("cookies", {}))
         self.client.headers.update({"token": session_data["token"], "lan": "1"})
         self._user_info = session_data.get("user_info")
+
+    @classmethod
+    def from_session(
+        cls, config: dict[str, Any], session_data: dict[str, Any]
+    ) -> LibicService:
+        """Synchronous constructor that restores session from cached data."""
+        service = cls(config)
+        service.restore_session(session_data)
+        return service
 
     async def get_user_info(self) -> dict:
         try:
@@ -224,15 +254,16 @@ class LibicService:
         resp.raise_for_status()
         return resp.json()
 
-    async def get_room_seats(self, room_id: int, date_str: str) -> list[dict]:
+    async def get_room_seats(self, room_id: str, date: date) -> list[dict]:
         """
         Retrieve all seats and reservations for a room.
         date_str format: YYYYMMDD
         """
+        date_str = date.strftime("%Y%m%d")
         try:
             response = await self.client.get(
-                LIBIC_API.join("seatRoom/roomSeats"),
-                params={"roomId": room_id, "date": date_str},
+                LIBIC_API.join("reserve"),
+                params={"roomIds": room_id, "resvDates": date_str, "sysKind": 8},
             )
             response.raise_for_status()
         except httpx.HTTPError as e:
@@ -242,7 +273,7 @@ class LibicService:
         resp = response.json()
         return resp.get("data", [])
 
-    async def my_reservations(self, begin_date: str, end_date: str) -> list[dict]:
+    async def list_reservations(self, begin_date: str, end_date: str) -> list[dict]:
         """
         begin_date/end_date format: YYYY-MM-DD
         """
@@ -267,8 +298,12 @@ class LibicService:
         return response.json().get("data", [])
 
     async def reserve_seat(
-        self, dev_id: int, start_dt: datetime, end_dt: datetime
+        self, dev_id: str, start: time, end: time, date: date = date.today()
     ) -> dict:
+
+        start_dt = datetime.combine(date, start)
+        end_dt = datetime.combine(date, end)
+
         def fmt(dt: datetime) -> str:
             return dt.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -304,7 +339,7 @@ class LibicService:
             raise ServiceError(f"Reservation failed: {data.get('message')}")
         return data
 
-    async def retrieve_seat_menu_tree(self) -> SectionTree:
+    async def get_seat_menu_tree(self) -> SectionTree:
         """Fetch the nested building -> floor -> section."""
         try:
             resp = await self.client.get(LIBIC_API.join("seatMenu"))
@@ -315,17 +350,37 @@ class LibicService:
         data = resp.json().get("data", [])
         return SectionTree(buildings=data)
 
-    async def get_room_open_scope(self, room_id: int) -> list[dict]:
-        """Fetch opening hours for a specific room."""
+    async def get_sections(self) -> dict[str, Section]:
+        """Flattened mapping of section ID to Section object for quick lookup."""
+        sections: dict[str, Section] = {}
+        for building in (await self.get_seat_menu_tree()).buildings:
+            for floor in building.floors:
+                for section in floor.sections:
+                    sections[section.name] = section
+        return sections
+
+    async def get_section_info(self, section_id: str) -> list[dict]:
+        """Fetch opening hours for a specific section."""
         try:
             resp = await self.client.get(
                 LIBIC_API.join("seatRoom/openScope"),
-                params={"roomId": room_id},
+                params={"roomId": int(section_id)},
             )
             resp.raise_for_status()
         except Exception as e:
-            raise ServiceError(f"Failed to fetch room open scope: {e}") from e
+            raise ServiceError(f"Failed to fetch section open scope: {e}") from e
         return resp.json().get("data", [])
+
+    async def get_section_seats(self, section_id: str) -> dict[str, Any]:
+        """Fetch seat info for a specific section for today."""
+        info = await self.get_room_seats(str(section_id), date.today())
+        seats: dict[str, Any] = {}
+        for seat in info:
+            dev_name = seat.get("devName")
+            if dev_name:
+                seats[dev_name] = seat
+
+        return seats
 
     async def cancel_reservation(self, uuid: str) -> dict:
         """Cancel a pending (future) reservation."""
