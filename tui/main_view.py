@@ -2,9 +2,9 @@
 Main (landing) view for the TUI application.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Callable
 
 from prompt_toolkit import ANSI
 from prompt_toolkit.application import get_app
@@ -34,7 +34,7 @@ class Option:
 
 class State(Enum):
     # These record the index of active options
-    ON_HALT = tuple()
+    ON_HALT = ()
     FORCE_SCHEDULE = (1, 2)
     NORMAL = (0, 1, 2)
 
@@ -125,7 +125,7 @@ class MainView(View):
     def _get_title(self) -> ANSI:
         title = Text("SchedulEase", style="bold cyan", justify="center")
         subtitle = Text("NKU选课助手", justify="center")
-        return self._get_rich_content(
+        return self.get_rich_content(
             Panel(Group(title, subtitle), border_style="cyan", padding=(1, 2))
         )
 
@@ -157,11 +157,11 @@ class MainView(View):
             border_style="cyan",
             padding=(1, 2),
         )
-        return self._get_rich_content(panel)
+        return self.get_rich_content(panel)
 
     def _get_options_bar(self) -> ANSI:
         items: list[Text] = []
-        for i, opt in enumerate(self.total_options):
+        for _, opt in enumerate(self.total_options):
             if opt in self.options:
                 # Find the position of this option in the filtered self.options list
                 option_index = self.options.index(opt)
@@ -179,10 +179,10 @@ class MainView(View):
         panel = Panel(
             row, border_style="cyan", title="[bold]Options[/bold]", padding=(0, 2)
         )
-        return self._get_rich_content(panel)
+        return self.get_rich_content(panel)
 
     def _get_shortcuts(self) -> ANSI:
-        return self._get_rich_content(
+        return self.get_rich_content(
             Text.from_markup(
                 "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]浏览选项[/bold]  • [bold green]Enter[/bold green]: [bold]进入界面[/bold]"
             )

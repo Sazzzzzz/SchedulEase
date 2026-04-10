@@ -7,11 +7,10 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum, auto
-from typing import Optional
 
-from prompt_toolkit.application import get_app
 import schedule
 from prompt_toolkit import ANSI
+from prompt_toolkit.application import get_app
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -32,9 +31,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .base_view import View
 from ..core.eamis_service import EamisService
 from ..utils.shared import AppEvent, Course, EventBus
+from .base_view import View
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +75,10 @@ class TimeValidator(Validator):
             raise ValidationError(message="输入不可为空")
         try:
             datetime.strptime(text, "%H:%M")
-        except ValueError:
+        except ValueError as e:
             raise ValidationError(
                 message="时间格式有误。请使用24 小时制时间格式 HH:MM（如 14:30，08:00）"
-            )
+            ) from e
 
 
 class ScheduleView(View):
@@ -96,8 +95,8 @@ class ScheduleView(View):
         # State management
         self._state = State.PREINPUT
         self.courses: list[Course] = []
-        self.target_datetime: Optional[datetime] = None
-        self._refresh_task: Optional[asyncio.Task] = None
+        self.target_datetime: datetime | None = None
+        self._refresh_task: asyncio.Task | None = None
 
         self._create_layout()
 
@@ -255,7 +254,7 @@ class ScheduleView(View):
             border_style="cyan",
             padding=(1, 2),
         )
-        return self._get_rich_content(panel)
+        return self.get_rich_content(panel)
 
     def _get_course_list(self):
         """Display the list of courses to be scheduled."""
@@ -276,7 +275,7 @@ class ScheduleView(View):
                 ", ".join(course.teachers),
             )
 
-        return self._get_rich_content(table)
+        return self.get_rich_content(table)
 
     def _get_time_instructions(self):
         """Generate time input instructions."""
@@ -291,7 +290,7 @@ class ScheduleView(View):
         text = Text()
         for instruction in instructions:
             text.append_text(Text.from_markup(instruction + "\n"))
-        return self._get_rich_content(text)
+        return self.get_rich_content(text)
 
     def _get_status_panel(self):
         """Display current scheduling status."""
@@ -333,7 +332,7 @@ class ScheduleView(View):
             padding=(1, 2),
         )
 
-        return self._get_rich_content(panel)
+        return self.get_rich_content(panel)
 
     def _get_log_panel(self) -> ANSI:
         """Display scheduling and execution logs using rich logging."""
@@ -352,7 +351,7 @@ class ScheduleView(View):
             case State.RUNNING:
                 controls = "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold green]Home[/bold green]: [bold]返回主页[/bold]"
 
-        return self._get_rich_content(Text.from_markup(controls))
+        return self.get_rich_content(Text.from_markup(controls))
 
     def _start_refresh(self):
         """Start the auto-refresh page when scheduling begins."""
@@ -431,7 +430,7 @@ class ScheduleView(View):
         logger.debug("🚀 Starting course election process...")
         self.state = State.RUNNING
         self._election_spawned = True
-        asyncio.create_task(self._execute_election_async())
+        return asyncio.create_task(self._execute_election_async())
 
     async def _execute_election_async(self):
         """turn the election job into async function

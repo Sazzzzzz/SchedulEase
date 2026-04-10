@@ -3,7 +3,6 @@ View object responsible for creating and editing configurations.
 """
 
 from enum import Enum, auto
-from typing import Optional
 
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.filters import Condition
@@ -42,7 +41,7 @@ class State(Enum):
 class PasswordValidator(Validator):
     """Validator that checks if password matches the first password."""
 
-    def __init__(self, password: Optional[str] = None):
+    def __init__(self, password: str | None = None):
         self.password = password
 
     def validate(self, document):
@@ -236,7 +235,7 @@ class ConfigView(View):
             border_style="cyan",
             padding=(1, 2),
         )
-        return self._get_rich_content(panel)
+        return self.get_rich_content(panel)
 
     def _get_instructions(self) -> ANSI:
         """Generate context-sensitive instructions."""
@@ -266,7 +265,7 @@ class ConfigView(View):
         for instruction in current_instructions:
             text.append_text(Text.from_markup(instruction + "\n"))
 
-        return self._get_rich_content(text)
+        return self.get_rich_content(text)
 
     def _get_input_label(self) -> ANSI:
         """Generate the input field label."""
@@ -278,7 +277,7 @@ class ConfigView(View):
         }
 
         label = labels.get(self.state, "")
-        return self._get_rich_content(Text.from_markup(label))
+        return self.get_rich_content(Text.from_markup(label))
 
     def _get_success_panel(self) -> ANSI:
         """Generate the success panel after configuration is complete.
@@ -300,10 +299,10 @@ class ConfigView(View):
             padding=(1, 2),
         )
 
-        return self._get_rich_content(panel)
+        return self.get_rich_content(panel)
 
     def _get_shortcuts(self) -> ANSI:
-        return self._get_rich_content(
+        return self.get_rich_content(
             Text.from_markup(
                 "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold] • [bold cyan]Enter[/bold cyan]: [bold]下一步[/bold]"
             )

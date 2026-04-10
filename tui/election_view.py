@@ -2,10 +2,11 @@
 View object responsible for displaying and managing the course election process.
 """
 
-from enum import Enum, auto
 import re
+from collections.abc import Generator
+from enum import Enum, auto
 from itertools import combinations
-from typing import Any, Generator, Optional
+from typing import Any
 
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import Completer, Completion
@@ -48,12 +49,11 @@ class CourseCompleter(Completer):
     def __init__(self, service: EamisServiceProtocol):
         self.service = service
         self.candidates = [
-            Course.from_row(row, service) for row in service.course_info.to_dicts()
+            Course.from_row(row, service)
+            for row in service.get_course_info().to_dicts()
         ]
 
-    def get_completions(
-        self, document, complete_event
-    ) -> Generator[Completion, Any, None]:
+    def get_completions(self, document, complete_event) -> Generator[Completion, Any]:
         """
         Yields completions based on the user's input.
         """
@@ -87,10 +87,10 @@ class CourseValidator(Validator):
 
         try:
             Course.from_input(query, self.service)
-        except ValueError:
+        except ValueError as e:
             raise ValidationError(
                 message="输入格式有误！请从课程列表中选择正确的课程名称。"
-            )
+            ) from e
 
 
 # TODO: fix the bug related to string Course id
@@ -99,7 +99,7 @@ class Curriculum:
     A container class responsible for storing elected course and conflict analysis.
     """
 
-    def __init__(self, initial_courses: Optional[list[Course]] = None):
+    def __init__(self, initial_courses: list[Course] | None = None):
         self.courses: list[Course] = initial_courses or []
         self.conflicts: dict[
             int, set[int]
@@ -305,13 +305,13 @@ class ElectionView(View):
 
     def _get_shortcuts(self) -> ANSI:
         if self.state is State.NORMAL:
-            return self._get_rich_content(
+            return self.get_rich_content(
                 Text.from_markup(
                     "• [bold red]Ctrl+C[/bold red]: [bold]退出程序[/bold]  • [bold cyan]Left/Right[/bold cyan]: [bold]切换选中课程[/bold]  • [bold green]Backspace[/bold green]: [bold]删除课程[/bold]  • [bold yellow]Ctrl+S[/bold yellow]: [bold]下一步[/bold]",
                 )
             )
         else:
-            return self._get_rich_content(
+            return self.get_rich_content(
                 Text.from_markup(
                     "• [bold red]N[/bold red]: [bold]返回修改[/bold]  • [bold green]Y[/bold green]: [bold]确定选课[/bold]",
                 )
@@ -373,13 +373,13 @@ class ElectionView(View):
 
             table.add_row(*row_data)
 
-        return self._get_rich_content(table)
+        return self.get_rich_content(table)
 
     def _get_prompt(self) -> ANSI:
         message = """\
 • 输入课程/老师名称添加课程
 • 程序将自动进行冲突检测，无需提前排除冲突课程"""
-        return self._get_rich_content(
+        return self.get_rich_content(
             Panel(
                 Text.from_markup(message),
                 title="[bold cyan]Commands[/bold cyan]",
@@ -414,7 +414,7 @@ class ElectionView(View):
         # By displaying all conflicts, one could make sense of the full picture
         # of conflicts and resolve them accordingly
         if not self.curriculum.conflicts:
-            return self._get_rich_content(Group(*renderables))
+            return self.get_rich_content(Group(*renderables))
         renderables.append(Text("\nConflicts Detected:", style="bold red"))
         # TODO: Nasty logic, fix later
         for course_id, conflicting_ids in self.curriculum.conflicts.items():
@@ -447,7 +447,7 @@ class ElectionView(View):
                     )
                 )
 
-        return self._get_rich_content(Group(*renderables))
+        return self.get_rich_content(Group(*renderables))
 
     def _update_focus(self, index: int):
         if index == 0:

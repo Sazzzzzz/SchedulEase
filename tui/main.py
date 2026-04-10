@@ -9,14 +9,14 @@ from enum import Enum, auto
 from prompt_toolkit import Application
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 
+from ..core.eamis_service import CachedService, EamisService
+from ..utils.config import CONFIG_PATH, load_config
+from ..utils.shared import AppEvent, Course, EventBus
 from .base_view import View
 from .config_view import ConfigView
 from .election_view import ElectionView
 from .main_view import LogLevel, MainView
 from .schedule_view import ScheduleView
-from ..utils.config import CONFIG_PATH, load_config
-from ..core.eamis_service import CachedService, EamisService
-from ..utils.shared import AppEvent, Course, EventBus
 
 
 class SetupError(Exception):
@@ -119,7 +119,7 @@ class MainApp(Application):
 
         # Login
         try:
-            self.service.postlogin_response
+            self.service.get_postlogin_response()
             self.add_log("成功登录", LogLevel.SUCCESS)
         except Exception as e:
             self.add_log(f"连接失败: {e}", LogLevel.ERROR)
@@ -127,7 +127,7 @@ class MainApp(Application):
 
         # Load course info
         try:
-            self.service.course_info
+            self.service.get_course_info()
             self.add_log("成功加载课程信息", LogLevel.SUCCESS)
             self.service.save_course_info()
             self.add_log("成功保存课程信息", LogLevel.SUCCESS)

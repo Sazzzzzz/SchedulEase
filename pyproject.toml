@@ -3,6 +3,8 @@ name = "schedulease"
 version = "0.1.0"
 description = "A TUI program for scheduling course elections in NKU"
 readme = "README.md"
+license = "Unlicense"
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [
     "bs4>=0.0.2",
@@ -33,3 +35,31 @@ libic = "schedulease.cli.main:main"
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "UP",    # pyupgrade 
+    "SIM",   # flake8-simplify
+    "RUF",   # ruff-specific rules
+    "ASYNC", # flake8-async checks
+    "PTH",   # flake8-use-pathlib
+]
+ignore = [
+    "E501",   # line length (formatter handles this)
+    "B008",   # function calls in defaults (sometimes intentional in CLI/typing use)
+    "RUF001", # ambiguous unicode characters (often false positives in docstrings/comments)
+    "RUF003", # ambiguous unicode characters (often false positives in docstrings/comments)
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true

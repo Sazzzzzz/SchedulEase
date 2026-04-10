@@ -1,20 +1,19 @@
 import asyncio
 import json
 import logging
+from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Callable, Coroutine, ParamSpec, TypeVar
+from typing import Any
 
 from ..core.libic_service import LibicService
 from ..utils.config import DATA_PATH, load_config
 
 SESSION_FILE = DATA_PATH / "session.json"
 logger = logging.getLogger(__name__)
-P = ParamSpec("P")
-T = TypeVar("T")
 
 
-def async2sync(func: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, T]:
+def async2sync[**P, T](func: Callable[P, Coroutine[Any, Any, T]]) -> Callable[P, T]:
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         return asyncio.run(func(*args, **kwargs))
@@ -31,7 +30,7 @@ async def get_libic_service(
     session_data: dict[str, Any] = {}
 
     if not force_login and SESSION_FILE.exists():
-        with open(SESSION_FILE, "r") as f:
+        with SESSION_FILE.open() as f:
             session_data = json.load(f)
         if (
             t := session_data.get("timestamp")
@@ -44,7 +43,7 @@ async def get_libic_service(
     if needs_login:
         service = await LibicService.from_login(config)
         SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(SESSION_FILE, "w") as f:
+        with SESSION_FILE.open("w") as f:
             json.dump(service.export_session(), f)
     else:
         service = LibicService.from_session(config, session_data)

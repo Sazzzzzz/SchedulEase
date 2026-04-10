@@ -8,29 +8,24 @@ import logging
 import random
 import re
 from collections import OrderedDict
+from collections.abc import Callable, Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from enum import Enum
-from functools import cached_property
 from itertools import chain
 from time import sleep
 from typing import (
     Any,
-    Callable,
-    Iterable,
     NamedTuple,
-    ParamSpec,
     Protocol,
-    TypeAlias,
-    TypeVar,
     cast,
 )
+from warnings import deprecated
 
 import hjson
 import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
-from typing_extensions import deprecated
 
 from ..utils.config import DATA_PATH, load_config
 from ..utils.shared import Course
@@ -52,7 +47,7 @@ class Profile(NamedTuple):
     id: str
 
 
-CourseInfo: TypeAlias = dict[str, Any]
+type CourseInfo = dict[str, Any]
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -63,21 +58,18 @@ class EamisServiceProtocol(Protocol):
 
     def initial_connection(self) -> None: ...
 
-    @cached_property
-    def postlogin_response(self) -> httpx.Response: ...
+    def get_postlogin_response(self) -> httpx.Response: ...
 
     # even profiles is not necessary...
-    @cached_property
-    def profiles(self) -> list[Profile]: ...
+    def get_profiles(self) -> list[Profile]: ...
 
-    @cached_property
-    def course_info(self) -> pl.DataFrame: ...
+    def get_course_info(self) -> pl.DataFrame: ...
 
 
 class EamisService:
     # ---- Utilities ----
     # "startWeek", "endWeek", "credits" can be added later if needed
-    COURSE_FIELDS = [
+    COURSE_FIELDS = (
         "id",
         "name",
         "code",
@@ -87,17 +79,14 @@ class EamisService:
         "campusName",
         "arrangeInfo",
         "expLessonGroups",
-    ]
-    SCHEDULE_FIELDS = [
+    )
+    SCHEDULE_FIELDS = (
         "weekDay",
         "startUnit",
         "endUnit",
         "rooms",
         "expLessonGroupNo",
-    ]
-
-    P = ParamSpec("P")
-    T = TypeVar("T")
+    )
 
     class Operation(Enum):
         """Enum for course operations."""
@@ -111,6 +100,9 @@ class EamisService:
         self.account: str = config["user"]["account"]
         self.encrypted_password: str = config["user"]["encrypted_password"]
         self.client = httpx.Client(headers=OrderedDict(config["headers"]))
+        self._postlogin_response: httpx.Response | None = None
+        self._profiles: list[Profile] | None = None
+        self._course_info: pl.DataFrame | None = None
 
     def initial_connection(self) -> None:
         """
@@ -132,10 +124,11 @@ class EamisService:
     # 1. The login process is only executed once per instance.
     # 2. The values will be available when accessed instead of manual invocation.
 
-    @cached_property
-    def postlogin_response(self) -> httpx.Response:
-        """Cached property to store the response after login."""
-        return self._login()
+    def get_postlogin_response(self) -> httpx.Response:
+        """Get the response after login, executing the login process if needed."""
+        if self._postlogin_response is None:
+            self._postlogin_response = self._login()
+        return self._postlogin_response
 
     def _login(self):
         """Login to EAMIS service.
@@ -206,14 +199,16 @@ class EamisService:
             ) from e
         return self.client.get(link, follow_redirects=True)
 
-    @cached_property
-    def profiles(self) -> list[Profile]:
+    def get_profiles(self) -> list[Profile]:
         """
-        Cached property to store course profiles after fetching them.
+        Fetch all election categories available to the user, or return the cached ones.
 
         This invokes login method.
         """
-        return self._get_profiles()
+        if self._profiles is None:
+            self.get_postlogin_response()
+            self._profiles = self._get_profiles()
+        return self._profiles
 
     def _get_profiles(self) -> list[Profile]:
         """Fetch all election categories available to the user."""
@@ -221,7 +216,7 @@ class EamisService:
             self.course_elect_menu_response = self.client.get(
                 PROFILE_URL,
                 headers={
-                    "Referer": str(self.postlogin_response.url),
+                    "Referer": str(self.get_postlogin_response().url),
                     "X-Requested-With": "XMLHttpRequest",
                 },
                 params={"_": EamisService.create_timestamp()},
@@ -330,20 +325,21 @@ class EamisService:
 
         return EamisService.process_raw_data(raw_data, profile)
 
-    @cached_property
-    def course_info(self) -> pl.DataFrame:
+    def get_course_info(self) -> pl.DataFrame:
         """
-        Cached property to store course information as a Polars DataFrame. All dataframe references points to this property.
+        Get course information as a Polars DataFrame. All dataframe references points to this property.
 
         This invokes profile method and in turn invokes login.
         """
-        return self._get_all_course_info()
+        if self._course_info is None:
+            self._course_info = self._get_all_course_info()
+        return self._course_info
 
     def _get_all_course_info(self) -> pl.DataFrame:
         """Fetch all course information for the user."""
 
         all_course_info = chain.from_iterable(
-            self._get_course_data(profile) for profile in self.profiles
+            self._get_course_data(profile) for profile in self.get_profiles()
         )
 
         df = EamisService.create_dataframe(all_course_info)
@@ -351,8 +347,8 @@ class EamisService:
 
     def save_course_info(self):
         file = DATA_PATH / "course_info.json"
-        with open(file, "w", encoding="utf-8") as f:
-            self.course_info.write_json(f)
+        with file.open("w", encoding="utf-8") as f:
+            self.get_course_info().write_json(f)
 
     # There will be only private method from here
     # ---- Course Election ----
@@ -467,7 +463,7 @@ class EamisService:
                     {
                         **{
                             col: row_data[col]
-                            for col in row_data.keys()
+                            for col in row_data
                             if col not in ["expLessonGroups", "arrangeInfo"]
                         },
                         "expLessonGroupNo": None,
@@ -493,7 +489,7 @@ class EamisService:
                 new_row = {
                     **{
                         col: row_data[col]
-                        for col in row_data.keys()
+                        for col in row_data
                         if col not in ["expLessonGroups", "arrangeInfo"]
                     },
                     "expLessonGroupNo": local_group_no,
@@ -554,7 +550,7 @@ class EamisService:
         return df
 
     # ----- Helper Functions -----
-    def delay_task(
+    def delay_task[**P, T](
         self, time: float, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
     ) -> T:
         """
@@ -582,12 +578,16 @@ class CachedService:
     def __init__(self, config: dict[str, Any]):
         self.config = config
         self.data_path = DATA_PATH / "course_info.json"
+        self._postlogin_response: httpx.Response | None = None
+        self._profiles: list[Profile] | None = None
+        self._course_info: pl.DataFrame | None = None
         # Get course_info at initialization to ensure it's available
-        self.course_info
+        self.get_course_info()
 
-    @cached_property
-    def course_info(self) -> pl.DataFrame:
-        return self._get_all_course_info()
+    def get_course_info(self) -> pl.DataFrame:
+        if self._course_info is None:
+            self._course_info = self._get_all_course_info()
+        return self._course_info
 
     # --- Override network-bound methods ---
 
@@ -598,14 +598,16 @@ class CachedService:
         logger.info("Mimicking successful login.")
         return httpx.Response(200, text="Mock login successful")
 
-    @cached_property
-    def postlogin_response(self) -> httpx.Response:
-        return self._login()
+    def get_postlogin_response(self) -> httpx.Response:
+        if self._postlogin_response is None:
+            self._postlogin_response = self._login()
+        return self._postlogin_response
 
-    @cached_property
-    def profiles(self) -> list[Profile]:
+    def get_profiles(self) -> list[Profile]:
         """Returns a list of profiles."""
-        return self._get_profiles()
+        if self._profiles is None:
+            self._profiles = self._get_profiles()
+        return self._profiles
 
     def _get_profiles(self) -> list[Profile]:
         """Returns an empty list of profiles."""
@@ -630,4 +632,4 @@ class CachedService:
 if __name__ == "__main__":
     config = load_config()
     service = EamisService(config)
-    print(service.course_info)
+    print(service.get_course_info())

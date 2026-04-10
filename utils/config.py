@@ -1,6 +1,6 @@
 import hashlib
-import tomllib
 import logging
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +32,7 @@ Sec-Ch-Ua-Platform = '"macOS"'
 
 # --- User Credentials ---
 # University portal username and password below.
-# Actual password will not be recorded for safety. 
+# Actual password will not be recorded for safety.
 # DO NOT share this file with others.
 [user]
 account = "{account}"
@@ -73,7 +73,7 @@ def encrypt(password: str) -> str:
 def create_config(account: str, password: str) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+    with CONFIG_PATH.open("w", encoding="utf-8") as f:
         f.write(
             DEFAULT_CONFIG_TEMPLATE.format(
                 account=account,
@@ -89,5 +89,6 @@ def load_config() -> dict[str, Any]:
         raise FileNotFoundError(
             f"Configuration file not found at {CONFIG_PATH}. Please create it first."
         )
-    with open(CONFIG_PATH, "rb") as f:
+
+    with CONFIG_PATH.open("rb") as f:
         return tomllib.load(f)

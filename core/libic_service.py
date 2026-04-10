@@ -30,7 +30,7 @@ class Building(BaseModel):
 
     id: str
     name: str
-    floors: list["Floor"] = Field(default_factory=list, alias="children")
+    floors: list[Floor] = Field(default_factory=list, alias="children")
 
 
 class Floor(BaseModel):
@@ -90,7 +90,7 @@ class LibicService:
         async with httpx.AsyncClient() as client:
             try:
                 login_result = await client.post(
-                    f"{str(LOGIN_URL)}/api/v1/login?os=web",
+                    f"{LOGIN_URL!s}/api/v1/login?os=web",
                     headers={
                         "content-type": "application/json",
                         "csrf-token": csrf_token,
@@ -151,7 +151,7 @@ class LibicService:
                 )
                 await page.wait_for_selector("#password_account_input", timeout=15000)
             except Exception as e:
-                raise LoginError(f"Failed to navigate to login page: {e}")
+                raise LoginError(f"Failed to navigate to login page: {e}") from e
 
             # Extract IAM cookies (specifically csrf-token)
             iam_cookies = await ctx.cookies(urls=[str(LOGIN_URL)])
@@ -163,7 +163,7 @@ class LibicService:
             try:
                 next_link = await self._send_login_request(iam_cookie_jar)
             except Exception as e:
-                raise LoginError(f"Failed to send login request: {e}")
+                raise LoginError(f"Failed to send login request: {e}") from e
 
             # Proceed with CAS redirect flow
             try:
@@ -174,7 +174,7 @@ class LibicService:
                 )
                 await page.wait_for_selector("#app", timeout=15000)
             except Exception as e:
-                raise LoginError(f"CAS redirect failed: {e}")
+                raise LoginError(f"CAS redirect failed: {e}") from e
 
             # Post Login: Extract all Libic Cookies
             all_cookies = await ctx.cookies()

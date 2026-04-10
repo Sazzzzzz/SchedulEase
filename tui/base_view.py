@@ -2,8 +2,8 @@ import io
 from abc import ABC
 
 from prompt_toolkit import ANSI
-from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout import Layout
+from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from rich.console import Console
 from rich.rule import Rule
@@ -31,7 +31,7 @@ class View(ABC):
             content=FormattedTextControl(text=self._get_line_separator),
         )
 
-    def _get_rich_content(self, *args, **kwargs) -> ANSI:
+    def get_rich_content(self, *args, **kwargs) -> ANSI:
         """
         A utility function to render rich content to a string buffer.
         """
@@ -47,4 +47,4 @@ class View(ABC):
         """
         Returns a horizontal line separator for the layout.
         """
-        return self._get_rich_content(Rule(style="cyan"))
+        return self.get_rich_content(Rule(style="cyan"))

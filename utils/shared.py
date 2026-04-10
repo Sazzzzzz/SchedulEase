@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from enum import Enum, auto
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Self
+from typing import TYPE_CHECKING, Any, NamedTuple, Self
 
 import polars as pl
 
 # ----- Utilities for Core Services -----
 
 if TYPE_CHECKING:
-    from service import Service
+    from ..core.eamis_service import EamisServiceProtocol as Service
 
 
 class Weekdays(Enum):
@@ -59,7 +59,7 @@ class Duration(NamedTuple):
         return duration1.start <= duration2.end and duration2.start <= duration1.end
 
     @staticmethod
-    def default() -> "Duration":
+    def default() -> Duration:
         """
         Return a default Duration that does not overlap with any other.
         """
@@ -78,8 +78,8 @@ class Course:
     teachers: list[str]
     profileUrl: str
     profileId: str
-    expLessonGroup: Optional[int]
-    expLessonGroupNo: Optional[int]
+    expLessonGroup: int | None
+    expLessonGroupNo: int | None
 
     # Every Course instance will have a reference to father service
     # This is to avoid hidden dependencies on the EamisService on class level
@@ -98,15 +98,24 @@ class Course:
         if m := re.match(r"\[(\d+):(\d+)\]", query):
             course_id = int(m.group(1))
             group_no = int(m.group(2))
-            row = service.course_info.filter(
-                (pl.col("id") == course_id) & (pl.col("expLessonGroupNo") == group_no)
-            ).to_dicts()
+            row = (
+                service.get_course_info()
+                .filter(
+                    (pl.col("id") == course_id)
+                    & (pl.col("expLessonGroupNo") == group_no)
+                )
+                .to_dicts()
+            )
         elif m := re.match(r"\[(\d+)\]", query):
             course_id = int(m.group(1))
             group_no = None
-            row = service.course_info.filter(
-                (pl.col("id") == course_id) & (pl.col("expLessonGroupNo").is_null())
-            ).to_dicts()
+            row = (
+                service.get_course_info()
+                .filter(
+                    (pl.col("id") == course_id) & (pl.col("expLessonGroupNo").is_null())
+                )
+                .to_dicts()
+            )
         else:
             raise ValueError(f"Invalid query string format: {query}")
 
@@ -180,14 +189,18 @@ class Course:
         """
         # This still relies on the df, which is acceptable if you see
         # Course as a "view" into the main DataFrame.
-        course_details = self.service.course_info.filter(
-            (pl.col("id") == self.id)
-            & (
-                pl.col("expLessonGroupNo") == self.expLessonGroupNo
-                if self.expLessonGroupNo is not None
-                else pl.col("expLessonGroupNo").is_null()
+        course_details = (
+            self.service.get_course_info()
+            .filter(
+                (pl.col("id") == self.id)
+                & (
+                    pl.col("expLessonGroupNo") == self.expLessonGroupNo
+                    if self.expLessonGroupNo is not None
+                    else pl.col("expLessonGroupNo").is_null()
+                )
             )
-        ).to_dicts()
+            .to_dicts()
+        )
 
         if not course_details:
             raise ValueError(f"Course with id={self.id} not found")
