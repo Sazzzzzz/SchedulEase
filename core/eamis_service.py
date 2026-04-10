@@ -27,7 +27,7 @@ import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
 
-from ..utils.config import DATA_PATH, load_config
+from ..utils.config import DATA_PATH, Config, load_config
 from ..utils.shared import Course
 from .exceptions import ElectError, LoginError, ParseError, ServiceError
 
@@ -94,12 +94,14 @@ class EamisService:
         ELECT = True
         CANCEL = False
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: Config) -> None:
         # Hold a reference to config for views to use
         self.config = config
-        self.account: str = config["user"]["account"]
-        self.encrypted_password: str = config["user"]["encrypted_password"]
-        self.client = httpx.Client(headers=OrderedDict(config["headers"]))
+        self.account: str = config.user.account
+        self.encrypted_password: str = config.user.encrypted_password
+        self.client = httpx.Client(
+            headers=OrderedDict(config.header.model_dump(by_alias=True))
+        )
         self._postlogin_response: httpx.Response | None = None
         self._profiles: list[Profile] | None = None
         self._course_info: pl.DataFrame | None = None
@@ -321,7 +323,7 @@ class EamisService:
             ) from e
         raw_data = cast(list[CourseInfo], hjson.loads(info))
 
-        sleep(self.config["settings"].get("profile_delay", 0))
+        sleep(self.config.eamis.profile_delay)
 
         return EamisService.process_raw_data(raw_data, profile)
 

@@ -19,6 +19,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "rich>=14.0.0",
     "schedule>=1.2.2",
+    "tomli-w>=1.2.0",
     "typer>=0.24.1",
 ]
 

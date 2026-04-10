@@ -13,6 +13,7 @@ import httpx
 from playwright.async_api import async_playwright
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..utils.config import Config
 from .exceptions import LoginError, ServiceError
 
 logger = logging.getLogger(__name__)
@@ -55,14 +56,14 @@ class SectionTree(BaseModel):
 
 
 class LibicService:
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: Config) -> None:
         self.config = config
-        self.account = config["user"]["account"]
-        self.encrypted_password = config["user"]["encrypted_password"]
+        self.account = config.user.account
+        self.encrypted_password = config.user.encrypted_password
 
         # We will use an async client since playwright flow is async
         self.client = httpx.AsyncClient(
-            headers=OrderedDict(config["headers"]),
+            headers=OrderedDict(config.header.model_dump(by_alias=True)),
             follow_redirects=False,
         )
         self.client.headers["Referer"] = str(LIBIC_URL)
@@ -206,7 +207,7 @@ class LibicService:
         logger.info("Successfully logged into Libic.")
 
     @classmethod
-    async def from_login(cls, config: dict[str, Any]) -> LibicService:
+    async def from_login(cls, config: Config) -> LibicService:
         """
         LibicService constructor that performs the login flow.
         """
@@ -230,9 +231,7 @@ class LibicService:
         self._user_info = session_data.get("user_info")
 
     @classmethod
-    def from_session(
-        cls, config: dict[str, Any], session_data: dict[str, Any]
-    ) -> LibicService:
+    def from_session(cls, config: Config, session_data: dict[str, Any]) -> LibicService:
         """Synchronous constructor that restores session from cached data."""
         service = cls(config)
         service.restore_session(session_data)
