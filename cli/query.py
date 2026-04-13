@@ -4,13 +4,12 @@ from rich.console import Console
 from rich.table import Table
 from typer import Argument
 
-from .utils import async2sync, service
+from ..core.libic_service import LibicService
 
 console = Console()
 
 
-@async2sync
-async def status():
+async def status(service: LibicService):
     """Check current session status."""
     info = await service.get_user_info()
     console.print(
@@ -18,8 +17,7 @@ async def status():
     )
 
 
-@async2sync
-async def sections():
+async def sections(service: LibicService):
     """List all buildings, floors, and rooms."""
     tree = await service.get_seat_menu_tree()
 
@@ -34,8 +32,8 @@ async def sections():
         print()
 
 
-@async2sync
 async def seats(
+    service: LibicService,
     section_name: str = Argument(
         ..., help="The Section name to query (use 'sections' command to find)"
     ),

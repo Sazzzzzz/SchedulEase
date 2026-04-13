@@ -10,7 +10,7 @@ from datetime import date, datetime, time
 from typing import Any
 
 import httpx
-from playwright.async_api import async_playwright
+from playwright.async_api import Browser, Playwright, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..utils.config import Config
@@ -133,6 +133,27 @@ class LibicService:
             ) from e
         return link
 
+    async def _get_browser(self, p: Playwright) -> Browser:
+        headless = self.config.libic.headless
+        try:
+            match self.config.libic.browser:
+                case "chrome":
+                    return await p.chromium.launch(channel="chrome", headless=headless)
+                case "edge":
+                    return await p.chromium.launch(channel="msedge", headless=headless)
+                case "safari":
+                    return await p.webkit.launch(headless=headless)
+                case "firefox":
+                    return await p.firefox.launch(headless=headless)
+                case _:
+                    raise ValueError(
+                        f"Unsupported browser: {self.config.libic.browser}"
+                    )
+        except Exception as e:
+            raise ServiceError(
+                f"Failed to launch browser: {e}. You may need to install the required browser driver."
+            ) from e
+
     async def _playwright_login(self) -> dict[str, str]:
         """
         Executes the playwright login flow to retrieve libic cookies.
@@ -140,7 +161,7 @@ class LibicService:
         logger.info("Starting Libic Playwright login flow...")
         async with (
             async_playwright() as p,
-            await p.chromium.launch(channel="msedge", headless=False) as browser,
+            await self._get_browser(p) as browser,
         ):
             ctx = await browser.new_context()
             page = await ctx.new_page()

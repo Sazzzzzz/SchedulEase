@@ -4,13 +4,13 @@ from rich.console import Console
 from rich.table import Table
 from typer import Argument, Exit, Option
 
-from .utils import async2sync, service
+from ..core.libic_service import LibicService
 
 console = Console()
 
 
-@async2sync
 async def list(
+    service: LibicService,
     date: datetime | None = Option(
         None,
         "--date",
@@ -97,8 +97,8 @@ async def list(
     console.print(table)
 
 
-@async2sync
 async def reserve(
+    service: LibicService,
     section_name: str | None = Argument(
         None, help="The Section name to reserve (use 'sections' command to find)"
     ),
@@ -154,8 +154,8 @@ async def reserve(
         console.print(f"[bold red]Failed: {e}[/bold red]")
 
 
-@async2sync
 async def cancel(
+    service: LibicService,
     uuid: str = Argument(..., help="UUID of the pending reservation"),
 ):
     """Cancel a pending (future) reservation."""
@@ -166,8 +166,8 @@ async def cancel(
         console.print(f"[bold red]Failed to cancel: {e}[/bold red]")
 
 
-@async2sync
 async def end(
+    service: LibicService,
     uuid: str = Argument(..., help="UUID of the active reservation"),
 ):
     """End an active/current reservation early."""
