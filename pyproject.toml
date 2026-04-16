@@ -55,6 +55,7 @@ ignore = [
     "E501",   # line length (formatter handles this)
     "B008",   # function calls in defaults (sometimes intentional in CLI/typing use)
     "RUF001", # ambiguous unicode characters (often false positives in docstrings/comments)
+    "RUF002", # ambiguous unicode characters (often false positives in docstrings/comments)
     "RUF003", # ambiguous unicode characters (often false positives in docstrings/comments)
 ]
 

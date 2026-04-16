@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from collections import OrderedDict
 from datetime import date, datetime, time
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 from playwright.async_api import Browser, Playwright, async_playwright
@@ -56,6 +56,14 @@ class SectionTree(BaseModel):
 
 
 class LibicService:
+    STATUS_MAP: ClassVar[dict[int, str]] = {
+        3265: "已结束",  # 预约时间已到自然结束
+        1217: "已结束",  # 提前结束
+        1169: "已违约",
+        1027: "未开始",
+        1093: "使用中",
+    }
+
     def __init__(self, config: Config) -> None:
         self.config = config
         self.account = config.user.account
@@ -293,15 +301,17 @@ class LibicService:
         resp = response.json()
         return resp.get("data", [])
 
-    async def list_reservations(self, begin_date: str, end_date: str) -> list[dict]:
+    async def list_reservations(self, start: date, end: date) -> list[dict[str, Any]]:
         """
-        begin_date/end_date format: YYYY-MM-DD
+        start_date/end_date format: YYYY-MM-DD
         """
+        start_date = start.strftime("%Y-%m-%d")
+        end_date = end.strftime("%Y-%m-%d")
         try:
             response = await self.client.get(
                 LIBIC_API.join("reserve/resvInfo"),
                 params={
-                    "beginDate": begin_date,
+                    "beginDate": start_date,
                     "endDate": end_date,
                     "needStatus": 8582,
                     "page": 1,
@@ -431,3 +441,8 @@ class LibicService:
         if data.get("code") != 0:
             raise ServiceError(f"End reservation failed: {data.get('message')}")
         return data
+
+    @staticmethod
+    def from_timestamp(ts: int) -> datetime:
+        """Convert server timestamp (in milliseconds) to datetime."""
+        return datetime.fromtimestamp(ts / 1000)

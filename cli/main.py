@@ -4,25 +4,34 @@ import logging
 from typer import Context, Typer
 
 from ..utils.config import load_config
-from .query import seats, sections, status
-from .reserve import cancel, end, list, reserve
+from .query import clear_cache, confirm_status, list_seats, print_sections
+from .reserve import (
+    cancel_reservation,
+    end_reservation,
+    list_reservations,
+    reserve_seat,
+)
 from .utils import adapter, get_libic_service
 
 logger = logging.getLogger(__name__)
 
-app = Typer(help="NKU Library Reservation CLI")
+app = Typer(help="NKU 图书馆预约助手", add_completion=False)
 
-app.command(name="status")(adapter(status))
-app.command(name="list")(adapter(list))
-app.command(name="sections")(adapter(sections))
-app.command(name="reserve")(adapter(reserve))
-app.command(name="seats")(adapter(seats))
-app.command(name="cancel")(adapter(cancel))
-app.command(name="end")(adapter(end))
+# --- utils ---
+app.command(name="status")(adapter(confirm_status))
+app.command(name="clean")(adapter(clear_cache))
+# --- query ---
+app.command(name="list")(adapter(list_reservations))
+app.command(name="sections")(adapter(print_sections))
+app.command(name="seats")(adapter(list_seats))
+# --- reserve ---
+app.command(name="reserve")(adapter(reserve_seat))
+app.command(name="cancel")(adapter(cancel_reservation))
+app.command(name="end")(adapter(end_reservation))
 
 
 @app.callback()
-def inject_context(ctx: Context):
+def inject_context(ctx: Context) -> None:
     """Inject LibicService instance and event loop into the Typer context for use in commands.
     This function works well with `--help` command and won't trigger a login with simple `--help` usage."""
     ctx.ensure_object(dict)
