@@ -24,8 +24,8 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from ..utils.config import CONFIG_PATH, create_config, load_config
-from ..utils.shared import AppEvent, EventBus
+from ...common.config import CONFIG_PATH, create_config, load_config
+from ..utils import AppEvent, EventBus
 from .base_view import View
 
 
@@ -218,7 +218,7 @@ class ConfigView(View):
         """Prefill the account input with existing account if available."""
         try:
             config = load_config()
-            existing_account = config.get("user", {}).get("account", "")
+            existing_account = config.user.account
             self.account_buffer.text = existing_account
         except Exception:
             return None

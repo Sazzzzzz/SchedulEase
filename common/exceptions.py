@@ -16,3 +16,7 @@ class ParseError(ServiceError):
 
 class ElectError(ServiceError):
     """Raised for errors during course election, such as failure to elect or cancel a course."""
+
+
+class ConfigError(Exception):
+    """Raised for errors in configuration, such as missing or invalid config file."""

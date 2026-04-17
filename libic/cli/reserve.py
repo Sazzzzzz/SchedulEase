@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.table import Table
 from typer import Argument, Exit, Option, confirm
 
-from ..core.libic_service import LibicService
+from ..service import LibicService
 
 console = Console()
 

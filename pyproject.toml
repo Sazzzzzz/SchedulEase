@@ -9,7 +9,7 @@ requires-python = ">=3.13"
 dependencies = [
     "bs4>=0.0.2",
     "hjson>=3.1.0",
-    "httpx>=0.28.1",
+    "httpx[socks]>=0.28.1",
     "lxml>=6.0.0",
     "pathlib>=1.0.1",
     "playwright>=1.58.0",
@@ -30,8 +30,8 @@ dev = ["jupyter>=1.1.1", "nuitka>=2.7.13"]
 package-dir = { "schedulease" = "." }
 
 [project.scripts]
-eamis = "schedulease.tui.main:main"
-libic = "schedulease.cli.main:main"
+eamis = "schedulease.eamis.tui.main:main"
+libic = "schedulease.libic.cli.main:main"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

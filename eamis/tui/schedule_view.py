@@ -31,8 +31,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..core.eamis_service import EamisService
-from ..utils.shared import AppEvent, Course, EventBus
+from ..service import EamisService
+from ..utils import AppEvent, Course, EventBus
 from .base_view import View
 
 logger = logging.getLogger(__name__)
@@ -88,9 +88,7 @@ class ScheduleView(View):
         super().__init__()
         self.service = service
         self.bus = bus
-        self.logger = LoggerMixin(
-            self.service.config.get("eamis_settings", {}).get("log_level", "NOTSET")
-        )
+        self.logger = LoggerMixin(self.service.config.eamis.log_level)
 
         # State management
         self._state = State.PREINPUT
@@ -337,9 +335,7 @@ class ScheduleView(View):
     def _get_log_panel(self) -> ANSI:
         """Display scheduling and execution logs using rich logging."""
 
-        return self.logger.get_log(
-            self.service.config["eamis_settings"].get("log_lines", 0)
-        )
+        return self.logger.get_log(self.service.config.eamis.log_lines)
 
     def _get_shortcuts(self) -> ANSI:
         """Display control instructions."""
@@ -440,9 +436,7 @@ class ScheduleView(View):
 
         for i, course in enumerate(self.courses):
             if i > 0:
-                await asyncio.sleep(
-                    self.service.config["eamis_settings"].get("course_delay", 0)
-                )
+                await asyncio.sleep(self.service.config.eamis.course_delay)
             try:
                 logger.info(
                     f"🎯 Attempting to elect course {i + 1}/{len(self.courses)}: {course.name}"
@@ -469,7 +463,7 @@ class ScheduleView(View):
 if __name__ == "__main__":
     from prompt_toolkit import Application
 
-    from ..tests.dummy_service import dummy_service
+    from ...tests.dummy_service import dummy_service
 
     test_courses = [
         Course.from_row(row, dummy_service)

@@ -31,8 +31,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..core.eamis_service import EamisServiceProtocol
-from ..utils.shared import AppEvent, Course, EventBus, Weekdays
+from ..service import EamisServiceProtocol
+from ..utils import AppEvent, Course, EventBus, Weekdays
 from .base_view import View
 
 
@@ -481,7 +481,7 @@ if __name__ == "__main__":
     from prompt_toolkit import Application
     from prompt_toolkit.key_binding import KeyPressEvent
 
-    from ..tests.dummy_service import dummy_service
+    from ...tests.dummy_service import dummy_service
 
     kb = KeyBindings()
 

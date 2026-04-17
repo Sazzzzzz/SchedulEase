@@ -6,7 +6,9 @@ from pathlib import Path
 import tomli_w
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
+
+from .exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -77,7 +79,7 @@ class HeaderConfig(BaseModel):
 class EamisConfig(BaseModel):
     profile_delay: float = 0.5
     course_delay: float = 0.5
-    log_level: int = logging.INFO
+    log_level: str = "INFO"
     log_lines: int = 16
 
 
@@ -145,4 +147,9 @@ def load_config() -> Config:
 
     with CONFIG_PATH.open("rb") as f:
         raw = tomllib.load(f)
-    return Config.model_validate(raw)
+    try:
+        config = Config.model_validate(raw)
+    except ValidationError as e:
+        logger.error(f"Configuration file validation failed: {e}")
+        raise ConfigError(f"配置文件校验失败，请检查配置文件 {CONFIG_PATH}.") from e
+    return config

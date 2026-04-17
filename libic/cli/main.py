@@ -3,7 +3,7 @@ import logging
 
 from typer import Context, Typer
 
-from ..utils.config import load_config
+from ...common.config import load_config
 from .query import clear_cache, confirm_status, list_seats, print_sections
 from .reserve import (
     cancel_reservation,

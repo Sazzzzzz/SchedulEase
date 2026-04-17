@@ -10,9 +10,9 @@ from click import get_current_context
 from rich.console import Console
 from rich.panel import Panel
 
-from ..core.exceptions import LoginError
-from ..core.libic_service import LibicService
-from ..utils.config import DATA_PATH, Config
+from ...common.config import DATA_PATH, Config
+from ...common.exceptions import LoginError
+from ..service import LibicService
 
 SESSION_FILE = DATA_PATH / "session.json"
 logger = logging.getLogger(__name__)

@@ -13,8 +13,8 @@ import httpx
 from playwright.async_api import Browser, Playwright, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..utils.config import Config
-from .exceptions import LoginError, ServiceError
+from ..common.config import Config
+from ..common.exceptions import LoginError, ServiceError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -61,6 +61,7 @@ class LibicService:
         1217: "已结束",  # 提前结束
         1169: "已违约",
         1027: "未开始",
+        1029: "已开始",  # 未签到
         1093: "使用中",
     }
 

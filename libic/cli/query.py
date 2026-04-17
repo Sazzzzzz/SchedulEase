@@ -5,7 +5,7 @@ from rich.table import Table
 from typer import Argument, Exit
 
 from ..cli.utils import SESSION_FILE
-from ..core.libic_service import LibicService
+from ..service import LibicService
 
 console = Console()
 
