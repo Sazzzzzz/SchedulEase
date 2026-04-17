@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 from collections import OrderedDict
 from datetime import date, datetime, time
+from enum import IntEnum
 from typing import Any, ClassVar
 
 import httpx
@@ -55,14 +56,42 @@ class SectionTree(BaseModel):
     buildings: list[Building]
 
 
+class Reservation(BaseModel):
+    uuid: str
+    section: str
+    seat: str
+    start: datetime
+    end: datetime
+    status: LibicService.Status
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Reservation:
+        return Reservation(
+            uuid=data["uuid"],
+            section=data["resvDevInfoList"][0].get("roomName", "Unknown Section"),
+            seat=data["resvDevInfoList"][0]["devName"],
+            start=LibicService.from_timestamp(data["resvBeginTime"]),
+            end=LibicService.from_timestamp(data["resvEndTime"]),
+            status=LibicService.Status(data.get("resvStatus", 0)),
+        )
+
+
 class LibicService:
+    class Status(IntEnum):
+        ENDED_NATURALLY = 3265
+        ENDED_EARLY = 1217
+        VIOLATED = 1169
+        NOT_STARTED = 1027
+        STARTED_NOT_SIGNED = 1029
+        IN_USE = 1093
+
     STATUS_MAP: ClassVar[dict[int, str]] = {
-        3265: "已结束",  # 预约时间已到自然结束
-        1217: "已结束",  # 提前结束
-        1169: "已违约",
-        1027: "未开始",
-        1029: "已开始",  # 未签到
-        1093: "使用中",
+        Status.ENDED_NATURALLY: "已结束",  # 预约时间已到自然结束
+        Status.ENDED_EARLY: "已结束",  # 提前结束
+        Status.VIOLATED: "已违约",
+        Status.NOT_STARTED: "未开始",
+        Status.STARTED_NOT_SIGNED: "已开始",  # 未签到
+        Status.IN_USE: "使用中",
     }
 
     def __init__(self, config: Config) -> None:
@@ -302,9 +331,11 @@ class LibicService:
         resp = response.json()
         return resp.get("data", [])
 
-    async def list_reservations(self, start: date, end: date) -> list[dict[str, Any]]:
+    async def list_reservations(
+        self, start: date, end: date, filter: Status | None = None
+    ) -> list[Reservation]:
         """
-        start_date/end_date format: YYYY-MM-DD
+        List reservations between start_date and end_date format: YYYY-MM-DD
         """
         start_date = start.strftime("%Y-%m-%d")
         end_date = end.strftime("%Y-%m-%d")
@@ -326,7 +357,12 @@ class LibicService:
             raise ServiceError(f"Failed to fetch reservations: {e}") from e
         except Exception as e:
             raise ServiceError("Unexpected error fetching reservations") from e
-        return response.json().get("data", [])
+        reservations: list[Reservation] = [
+            Reservation.from_dict(r) for r in response.json().get("data", [])
+        ]
+        if filter is not None:
+            reservations = [r for r in reservations if r.status == filter]
+        return reservations
 
     async def reserve_seat(
         self, dev_id: str, start: time, end: time, date: date = date.today()
@@ -364,10 +400,10 @@ class LibicService:
             )
             resp.raise_for_status()
         except httpx.HTTPError as e:
-            raise ServiceError(f"Failed to reserve seat: {e}") from e
+            raise ServiceError(f"预约失败: {e}") from e
         data = resp.json()
         if data.get("code") != 0:
-            raise ServiceError(f"Reservation failed: {data.get('message')}")
+            raise ServiceError(f"预约失败: {data.get('message')}")
         return data
 
     async def get_seat_menu_tree(self) -> SectionTree:

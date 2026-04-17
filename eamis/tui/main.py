@@ -9,9 +9,9 @@ from enum import Enum, auto
 from prompt_toolkit import Application
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 
-from ..core.eamis_service import CachedService, EamisService
-from ..utils.config import CONFIG_PATH, load_config
-from ..utils.shared import AppEvent, Course, EventBus
+from ...common.config import CONFIG_PATH, load_config
+from ..service import CachedService, EamisService
+from ..utils import AppEvent, Course, EventBus
 from .base_view import View
 from .config_view import ConfigView
 from .election_view import ElectionView
@@ -103,7 +103,7 @@ class MainApp(Application):
         self.config = config
         # Check for test arg
         if test:
-            from ..tests.dummy_service import DummyEamisService
+            from ...tests.dummy_service import DummyEamisService
 
             self.service = DummyEamisService(config)
         else:

@@ -17,6 +17,7 @@ dependencies = [
     "prompt-toolkit>=3.0.51",
     "pycryptodome>=3.23.0",
     "pydantic>=2.12.5",
+    "questionary>=2.1.1",
     "rich>=14.0.0",
     "schedule>=1.2.2",
     "tomli-w>=1.2.0",

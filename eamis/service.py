@@ -577,7 +577,7 @@ class CachedService:
     A local service that loads data from cached info file.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: Config):
         self.config = config
         self.data_path = DATA_PATH / "course_info.json"
         self._postlogin_response: httpx.Response | None = None

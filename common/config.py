@@ -84,8 +84,7 @@ class EamisConfig(BaseModel):
 
 
 class LibicConfig(BaseModel):
-    browser: str = "chromium"
-    browser_channel: str = "msedge"
+    browser: str = "edge"
     headless: bool = False
 
 

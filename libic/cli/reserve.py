@@ -1,13 +1,38 @@
 from datetime import datetime, timedelta
-from typing import cast
 
+import questionary
 from rich.console import Console
+from rich.prompt import Prompt
 from rich.table import Table
 from typer import Argument, Exit, Option, confirm
 
-from ..service import LibicService
+from ..service import LibicService, Reservation
 
 console = Console()
+
+
+def _show_reservations_table(
+    service: LibicService,
+    reservations: list[Reservation],
+    title: str,
+) -> None:
+    table = Table(title=title, header_style="bold blue")
+    table.add_column("序号", justify="center")
+    table.add_column("座位信息", justify="center")
+    table.add_column("预约时间", style="green", justify="center")
+    table.add_column("预约状态", style="magenta", justify="center")
+    table.add_column("UUID", style="cyan", justify="center")
+
+    for idx, r in enumerate(reservations, start=1):
+        table.add_row(
+            str(idx),
+            f"{r.section} {r.seat}",
+            f"{r.start.strftime('%Y-%m-%d %H:%M')} - {r.end.strftime('%H:%M')}",
+            service.STATUS_MAP.get(r.status, str(r.status)),
+            r.uuid,
+        )
+
+    console.print(table)
 
 
 async def list_reservations(
@@ -69,35 +94,17 @@ async def list_reservations(
     end_str = end.strftime("%Y-%m-%d")
     duration = f"{start_str} to {end_str}" if start_str != end_str else start_str
 
-    reservations = await service.list_reservations(start, end)
+    reservations = await service.list_reservations(
+        start,
+        end,
+        filter=service.Status(filter_status) if filter_status is not None else None,
+    )
 
-    if not reservations:
-        console.print(f"[dim]未发现在 {duration} 的预约。[/dim]")
-        return
-
-    table = Table(title=f"我的预约 ({duration})", header_style="bold blue")
-
-    table.add_column("座位信息", justify="center")
-    table.add_column("预约时间", style="green", justify="center")
-    table.add_column("预约状态", style="magenta", justify="center")
-    table.add_column("UUID", style="cyan", justify="center")
-
-    for r in reservations:
-        if filter_status and r["resvStatus"] != filter_status:
-            continue
-        reserve_date = service.from_timestamp(r["resvBeginTime"]).date()
-        start_time = service.from_timestamp(r["resvBeginTime"]).strftime("%H:%M")
-        end_time = service.from_timestamp(r["resvEndTime"]).strftime("%H:%M")
-        devs = ", ".join([d["devName"] for d in r.get("resvDevInfoList", [])])
-        status = service.STATUS_MAP.get(r["resvStatus"], str(r["resvStatus"]))
-        table.add_row(
-            devs,
-            f"{reserve_date}: {start_time}-{end_time}",
-            status,
-            r["uuid"],
-        )
-
-    console.print(table)
+    _show_reservations_table(
+        service,
+        reservations,
+        title=f"My Reservations ({duration})",
+    )
 
 
 async def reserve_seat(
@@ -162,7 +169,7 @@ async def reserve_seat(
     start_t = start.time().replace(microsecond=0)
     end_t = end.time()
     if end_t <= start_t:
-        console.print("[bold red]Error: End time must be after start time![/bold red]")
+        console.print("[bold red]错误：结束时间必须在开始时间之后！[/bold red]")
         raise Exit(1)
 
     if date is None:
@@ -176,13 +183,15 @@ async def reserve_seat(
         # Extract the date part from the parsed datetime object
         date_t = date.date()
 
-    console.print(f"Booking Dev {dev_id} from {start_t} to {end_t}...")
+    console.print(
+        f"[bold yellow]正在预约时段 {start_t} 到 {end_t} 的座位 {dev_id} ...[/bold yellow]"
+    )
 
     try:
         await service.reserve_seat(dev_id, start_t, end_t, date_t)
-        console.print("[bold green]Reservation successful![/bold green]")
+        console.print("[bold green]预约成功！[/bold green]")
     except Exception as e:
-        console.print(f"[bold red]Failed: {e}[/bold red]")
+        console.print(f"[bold red]{e}[/bold red]")
 
 
 async def cancel_reservation(
@@ -191,13 +200,47 @@ async def cancel_reservation(
 ) -> None:
     """取消预约"""
     if uuid is None:
-        console.print("[red]Error: UUID is required to cancel a reservation![/red]")
-        raise Exit(1)
+        reservations = await service.list_reservations(
+            datetime.today(),
+            datetime.today() + timedelta(days=1),
+            filter=LibicService.Status.NOT_STARTED,
+        )
+        if not reservations:
+            console.print("[bold yellow]目前没有待开始的预约。[/bold yellow]")
+            raise Exit(0)
+        elif len(reservations) == 1:
+            r = reservations[0]
+            Prompt.ask(
+                f"[dim yellow]是否取消在 [/dim yellow][yellow]{r.section} {r.seat} {r.start.strftime('%H:%M')} - {r.end.strftime('%H:%M')}[yellow][dim yellow] 的预约?[/dim yellow]",
+                choices=["y", "n"],
+                default="y",
+            )
+            uuid = r.uuid
+        else:
+            choices = [
+                questionary.Choice(
+                    title=f"{r.start.strftime('%H:%M')} - {r.end.strftime('%H:%M')} {r.section} {r.seat}",
+                    value=r.uuid,
+                )
+                for r in reservations
+            ]
+            choices.append(questionary.Choice(title="退出", value="q"))
+
+            result: str = await questionary.select(
+                "发现多个待开始的预约。请选择一个要取消的预约：",
+                choices=choices,
+            ).ask_async()
+
+            if result == "q" or result is None:
+                console.print("[bold yellow]已停止取消预约[/bold yellow]")
+                raise Exit(0)
+
+            uuid = result
     try:
         await service.cancel_reservation(uuid)
-        console.print("[bold green]Reservation canceled successfully.[/bold green]")
+        console.print("[bold green]预约已取消[/bold green]")
     except Exception as e:
-        console.print(f"[bold red]Failed to cancel: {e}[/bold red]")
+        console.print(f"[bold red]取消预约失败: {e}[/bold red]")
 
 
 async def end_reservation(
@@ -207,28 +250,46 @@ async def end_reservation(
     """结束预约"""
     if uuid is None:
         reservations = await service.list_reservations(
-            datetime.today(), datetime.today()
+            datetime.today(),
+            datetime.today() + timedelta(days=1),
+            filter=LibicService.Status.IN_USE,
         )
         if not reservations:
-            console.print("[dim]No active reservations found for today.[/dim]")
-            return
-        if len([r for r in reservations if r["resvStatus"] == 1093]) == 1:
-            await list_reservations(
-                service, date=datetime.today(), start=None, end=None
+            console.print("[bold yellow]目前没有正在进行的预约。[/bold yellow]")
+            raise Exit(0)
+        elif len(reservations) == 1:
+            r = reservations[0]
+            ans = Prompt.ask(
+                f"[dim yellow]是否结束在 [/dim yellow][yellow]{r.section} {r.seat} {r.start.strftime('%H:%M')} - {r.end.strftime('%H:%M')}[yellow][dim yellow] 的预约?[/dim yellow]",
+                choices=["y", "n"],
+                default="y",
             )
-            if not confirm("End this reservation early?", default=True, abort=True):
-                return None
-            uuid = cast(str, reservations[0]["uuid"])
+            if ans.lower() != "y":
+                console.print("[bold red]已停止结束预约[/bold red]")
+                raise Exit(0)
+            uuid = r.uuid
         else:
-            console.print(
-                "[red]Error: Multiple reservations found. Please specify the UUID to end.[/red]"
-            )
-            await list_reservations(
-                service, date=datetime.today(), start=None, end=None
-            )
-            raise Exit(1)
+            choices = [
+                questionary.Choice(
+                    title=f"{r.start.strftime('%H:%M')} - {r.end.strftime('%H:%M')} {r.section} {r.seat}",
+                    value=r.uuid,
+                )
+                for r in reservations
+            ]
+            choices.append(questionary.Choice(title="退出", value="q"))
+
+            result: str = await questionary.select(
+                "发现多个正在进行的预约。请选择一个要结束的预约：",
+                choices=choices,
+            ).ask_async()
+
+            if result == "q" or result is None:
+                console.print("[bold yellow]已停止结束预约[/bold yellow]")
+                raise Exit(0)
+
+            uuid = result
     try:
         await service.end_reservation(uuid)
-        console.print("[bold green]Reservation ended successfully.[/bold green]")
+        console.print("[bold green]成功结束预约[/bold green]")
     except Exception as e:
-        console.print(f"[bold red]Failed to end: {e}[/bold red]")
+        console.print(f"[bold red]结束预约失败: {e}[/bold red]")

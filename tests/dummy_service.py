@@ -9,9 +9,9 @@ from typing import Any
 import httpx
 import polars as pl
 
-from ..utils.config import load_config
-from ..core.eamis_service import EamisService, Profile
-from ..utils.shared import Course
+from ..common.config import Config, load_config
+from ..eamis.service import EamisService, Profile
+from ..eamis.utils import Course
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class DummyEamisService(EamisService):
     and mimics network methods to return empty/mock responses.
     """
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: Config):
         """
         Initializes the dummy service. Bypasses the parent EamisService constructor
         to avoid needing a real config or httpx.Client.
