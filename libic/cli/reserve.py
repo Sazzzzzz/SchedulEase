@@ -160,7 +160,7 @@ async def reserve_seat(
 
     if start is None:
         console.print(
-            "[yellow] 未指定开始时间，默认使用当前时间作为预约开始时间。[/yellow]"
+            "[yellow]未指定开始时间，默认使用当前时间作为预约开始时间。[/yellow]"
         )
         start = datetime.now() + timedelta(
             minutes=2
@@ -253,6 +253,10 @@ async def end_reservation(
             datetime.today(),
             datetime.today() + timedelta(days=1),
             filter=LibicService.Status.IN_USE,
+        ) + await service.list_reservations(
+            datetime.today(),
+            datetime.today() + timedelta(days=1),
+            filter=LibicService.Status.TEMP_LEAVE,
         )
         if not reservations:
             console.print("[bold yellow]目前没有正在进行的预约。[/bold yellow]")

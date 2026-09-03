@@ -191,6 +191,10 @@ class EamisService:
                 raise LoginError(
                     f"Login failed: {message}. Parameter error, likely due to a change in the API format."
                 )
+            case 3025:
+                raise LoginError(
+                    f"Login failed: {message}. This may be caused by multiple logins. Please try to log in again after a while."
+                )
             case _:
                 raise LoginError(f"Login failed with code {code}: {message}")
         try:

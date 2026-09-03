@@ -84,6 +84,7 @@ class LibicService:
         NOT_STARTED = 1027
         STARTED_NOT_SIGNED = 1029
         IN_USE = 1093
+        TEMP_LEAVE = 3141
 
     STATUS_MAP: ClassVar[dict[int, str]] = {
         Status.ENDED_NATURALLY: "已结束",  # 预约时间已到自然结束
@@ -92,6 +93,7 @@ class LibicService:
         Status.NOT_STARTED: "未开始",
         Status.STARTED_NOT_SIGNED: "已开始",  # 未签到
         Status.IN_USE: "使用中",
+        Status.TEMP_LEAVE: "暂离",
     }
 
     def __init__(self, config: Config) -> None:

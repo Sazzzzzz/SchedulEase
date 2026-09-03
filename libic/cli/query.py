@@ -69,16 +69,16 @@ async def list_seats(
         title=f"{seat_date} {section.name} 座位列表",
         header_style="bold blue",
     )
-    table.add_column("座位ID", style="cyan")
-    table.add_column("座位名称", style="magenta")
-    table.add_column("预约状态")
+    table.add_column("座位ID", style="cyan", justify="center")
+    table.add_column("座位名称", style="magenta", justify="center")
+    table.add_column("预约状态", justify="center")
 
     table_right = Table(
         title=f"{seat_date} {section.name} 座位列表 (续表)", show_header=False
     )
-    table_right.add_column("座位ID", style="cyan")
-    table_right.add_column("座位名称", style="magenta")
-    table_right.add_column("预约状态")
+    table_right.add_column("座位ID", style="cyan", justify="center")
+    table_right.add_column("座位名称", style="magenta", justify="center")
+    table_right.add_column("预约状态", justify="center")
 
     active_seats = [s for s in seats_data if s["devStatus"] == 0]
     mid = (len(active_seats) + 1) // 2
