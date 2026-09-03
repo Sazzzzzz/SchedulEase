@@ -308,11 +308,12 @@ class LibicService:
             raise ServiceError("Unexpected error fetching user info") from e
         return response.json().get("data", {})
 
-    async def get_server_time(self) -> int:
-        """Returns server time in milliseconds"""
+    async def get_server_time(self) -> datetime:
+        """Returns server time"""
         resp = await self.client.get(LIBIC_API.join("pad/updateTime"))
         resp.raise_for_status()
-        return resp.json()
+        server_ts = resp.json()
+        return datetime.fromtimestamp(server_ts / 1000)
 
     async def get_room_seats(self, room_id: str, date: date) -> list[dict]:
         """
@@ -331,7 +332,7 @@ class LibicService:
         except Exception as e:
             raise ServiceError("Unexpected error fetching room seats") from e
         resp = response.json()
-        return resp.get("data", [])
+        return resp.get("data") or []
 
     async def list_reservations(
         self, start: date, end: date, filter: Status | None = None

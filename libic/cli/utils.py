@@ -4,6 +4,7 @@ import json
 import logging
 from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
+from functools import wraps
 from typing import Any, Concatenate
 
 from click import get_current_context
@@ -23,7 +24,7 @@ def adapter[**P, R](
     func: Callable[Concatenate[LibicService, P], Coroutine[Any, Any, R]],
 ) -> Callable[P, R]:
     """
-    This function is for converting core logic async functions into `Typer` commands. It automatically injects the `LibicService` instance from the Typer context.
+    This function is for converting core logic async functions into `Typer` commands. It injects the `LibicService` instance from the Typer context. It also runs async functions in the event loop from the Typer context.
     """
     # Using `functools.partial` would lose the original function's signature
     # so here we use `Concatenate` with `inspect` to remove the first parameter for the exposed command.
@@ -44,6 +45,19 @@ def adapter[**P, R](
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
     wrapper.__signature__ = exposed_sig  # type: ignore
+    return wrapper
+
+
+def async2sync[**P, T](
+    func: Callable[P, Coroutine[Any, Any, T]],
+) -> Callable[P, T]:
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        ctx = get_current_context()
+        loop: asyncio.AbstractEventLoop = ctx.obj["loop"]
+
+        return loop.run_until_complete(func(*args, **kwargs))
+
     return wrapper
 
 

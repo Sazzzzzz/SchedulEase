@@ -133,6 +133,21 @@ async def reserve_seat(
     ),
 ) -> None:
     """预约座位"""
+    dev_id, start_t, end_t, date_t = await _validate(
+        service, section_name, seat_name, date, start, end, seat_id
+    )
+    console.print(
+        f"[bold yellow]正在预约时段 {start_t} 到 {end_t} 的座位 {dev_id} ...[/bold yellow]"
+    )
+    try:
+        await service.reserve_seat(dev_id, start_t, end_t, date_t)
+        console.print("[bold green]预约成功！[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]{e}[/bold red]")
+
+
+async def _validate(service, section_name, seat_name, date, start, end, seat_id):
+    # Resolve seat_id
     if seat_id:
         dev_id = seat_id
     elif section_name is not None and seat_name is not None:
@@ -157,7 +172,7 @@ async def reserve_seat(
             "[bold red]Error: You must provide either --seat-id or both section_name and seat_name![/bold red]"
         )
         raise Exit(1)
-
+    # Validate date and time
     if start is None:
         console.print(
             "[yellow]未指定开始时间，默认使用当前时间作为预约开始时间。[/yellow]"
@@ -176,22 +191,19 @@ async def reserve_seat(
         date_t = datetime.today().date()
         if start_t < datetime.now().time():
             confirm(
-                "预约的开始时间已过，是否预约明天的座位？", abort=True, default=True
+                "预约的开始时间已过，是否预约明天的座位？",
+                abort=True,
+                default=True,
             )
             date_t += timedelta(days=1)
     else:
         # Extract the date part from the parsed datetime object
-        date_t = date.date()
+        today = datetime.today().date()
+        date_t = date.replace(year=today.year).date()
+        if date_t < today:
+            date_t = date.replace(year=today.year + 1).date()
 
-    console.print(
-        f"[bold yellow]正在预约时段 {start_t} 到 {end_t} 的座位 {dev_id} ...[/bold yellow]"
-    )
-
-    try:
-        await service.reserve_seat(dev_id, start_t, end_t, date_t)
-        console.print("[bold green]预约成功！[/bold green]")
-    except Exception as e:
-        console.print(f"[bold red]{e}[/bold red]")
+    return dev_id, start_t, end_t, date_t
 
 
 async def cancel_reservation(

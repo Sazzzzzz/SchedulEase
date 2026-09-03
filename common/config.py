@@ -86,6 +86,8 @@ class EamisConfig(BaseModel):
 class LibicConfig(BaseModel):
     browser: str = "edge"
     headless: bool = False
+    prepare_minutes: float = 1.0
+    overshoot_seconds: float = 3.0
 
 
 class Config(BaseModel):
