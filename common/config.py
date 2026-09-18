@@ -1,12 +1,13 @@
 import hashlib
 import logging
 import tomllib
+from datetime import time
 from pathlib import Path
 
 import tomli_w
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from .exceptions import ConfigError
 
@@ -83,11 +84,41 @@ class EamisConfig(BaseModel):
     log_lines: int = 16
 
 
+class WeeklyReservation(BaseModel):
+    weekday: int = Field(ge=1, le=7)
+    section: str
+    seat: str
+    start: time
+    end: time
+
+    @model_validator(mode="after")
+    def validate_times(self):
+        if self.start >= self.end:
+            raise ValueError("周计划的结束时间晚于开始时间")
+        return self
+
+
 class LibicConfig(BaseModel):
     browser: str = "edge"
     headless: bool = False
-    prepare_minutes: float = 1.0
-    overshoot_seconds: float = 3.0
+    prepare_minutes: float = Field(default=1.0, ge=0, allow_inf_nan=False)
+    overshoot_seconds: float = Field(default=3.0, ge=0, allow_inf_nan=False)
+    check_minutes: float = Field(default=55.0, gt=0, allow_inf_nan=False)
+    check_start: time = time(7)
+    check_end: time = time(23)
+    protect_minutes: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    rebook_minutes: float = Field(default=30.0, gt=0, allow_inf_nan=False)
+    advance_days: int = Field(default=1, ge=0)
+    send_time: time = time(21)
+    weekly: list[WeeklyReservation] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_schedule(self):
+        if self.check_start >= self.check_end:
+            raise ValueError("巡检结束时间必须晚于开始时间")
+        if self.rebook_minutes <= self.protect_minutes:
+            raise ValueError("重预约延迟必须大于保护提前量")
+        return self
 
 
 class Config(BaseModel):

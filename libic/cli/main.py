@@ -2,16 +2,16 @@
 Main entry point for LIBIC CLI commands.
 
 The system mainly works on the `Typer` framework. To make async commands work, it:
-1. Bundles initial `LibicService` and event loop into the Typer context
-2. Provides `adapter` decorator to convert async functions into Typer commands. Normal commands inject the `LibicService` instance from the adapter, and those requires `ctx` object directly (mainly for `schedule`) can use `async2sync` decorator.
+1. Stores the event loop in the Typer context
+2. Provides `adapter` to lazily inject a service when an async command executes.
 """
 
 import asyncio
 import logging
 
+from rich.logging import RichHandler
 from typer import Context, Typer
 
-from ...common.config import load_config
 from .query import clear_cache, confirm_status, list_seats, print_sections
 from .reserve import (
     cancel_reservation,
@@ -19,8 +19,8 @@ from .reserve import (
     list_reservations,
     reserve_seat,
 )
-from .schedule import schedule_reservation
-from .utils import adapter, async2sync, get_libic_service
+from .schedule import auto, schedule_reservation, watch
+from .utils import adapter
 
 logger = logging.getLogger(__name__)
 
@@ -38,21 +38,44 @@ app.command(name="reserve")(adapter(reserve_seat))
 app.command(name="cancel")(adapter(cancel_reservation))
 app.command(name="end")(adapter(end_reservation))
 # --- schedule ---
-app.command(name="schedule")(async2sync(schedule_reservation))
+app.command(name="schedule")(adapter(schedule_reservation, interactive=False))
+app.command(name="watch")(adapter(watch, interactive=False))
+app.command(name="auto")(adapter(auto, interactive=False))
 
 
 @app.callback()
 def inject_context(ctx: Context) -> None:
-    """Inject LibicService instance and event loop into the Typer context for use in commands.
-    This function works well with `--help` command and won't trigger a login with simple `--help` usage."""
+    """Prepare the command event loop without triggering login for help commands."""
     ctx.ensure_object(dict)
+    if ctx.invoked_subcommand in {"schedule", "watch", "auto"}:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(message)s",
+            datefmt="[%X]",
+            handlers=[RichHandler(rich_tracebacks=True)],
+        )
+        logging.getLogger("httpx").setLevel(logging.WARNING)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    ctx.call_on_close(loop.close)
     ctx.obj["loop"] = loop
-    # Every command runs with a fresh LibicService, although they may not be updated, they work well for initialization and login.
-    # and this is fine since other functions can work by passing the fresh LibicService instance from main command
-    ctx.obj["service"] = loop.run_until_complete(get_libic_service(load_config()))
+
+    async def shutdown():
+        tasks = [
+            task for task in asyncio.all_tasks() if task is not asyncio.current_task()
+        ]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await loop.shutdown_asyncgens()
+
+    def close():
+        try:
+            loop.run_until_complete(shutdown())
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
+
+    ctx.call_on_close(close)
 
 
 def main():

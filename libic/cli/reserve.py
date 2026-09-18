@@ -133,9 +133,17 @@ async def reserve_seat(
     ),
 ) -> None:
     """预约座位"""
-    dev_id, start_t, end_t, date_t = await _validate(
+    dev_id, section_id, start_t, end_t, date_t = await _validate(
         service, section_name, seat_name, date, start, end, seat_id
     )
+    if section_id:
+        (open_t, close_t) = await service.get_open_scope(section_id, date_t)
+        if not (open_t <= start_t < end_t <= close_t):
+            confirm(
+                f"Warning: The requested reservation time {start_t} - {end_t} is outside the library's open hours {open_t} - {close_t}. Do you want to proceed?",
+                abort=True,
+                default=False,
+            )
     console.print(
         f"[bold yellow]正在预约时段 {start_t} 到 {end_t} 的座位 {dev_id} ...[/bold yellow]"
     )
@@ -149,7 +157,10 @@ async def reserve_seat(
 async def _validate(service, section_name, seat_name, date, start, end, seat_id):
     # Resolve seat_id
     if seat_id:
+        # this is actually a patch, when only seat_id is provided, we cannot know the section_id
+        # but when you pass section_id alone, I am sure what you are doing
         dev_id = seat_id
+        section_id = None
     elif section_name is not None and seat_name is not None:
         try:
             section = (await service.get_sections())[section_name]
@@ -159,8 +170,9 @@ async def _validate(service, section_name, seat_name, date, start, end, seat_id)
             )
             raise Exit(1) from e
         try:
-            seat = await service.get_section_seats(section.id)
-            dev_id: str = seat[seat_name]["devId"]
+            section_id = section.id
+            seats = await service.get_section_seats(section_id)
+            dev_id: str = seats[seat_name]["devId"]
 
         except KeyError as e:
             console.print(
@@ -203,7 +215,7 @@ async def _validate(service, section_name, seat_name, date, start, end, seat_id)
         if date_t < today:
             date_t = date.replace(year=today.year + 1).date()
 
-    return dev_id, start_t, end_t, date_t
+    return dev_id, section_id, start_t, end_t, date_t
 
 
 async def cancel_reservation(

@@ -8,7 +8,7 @@ import logging
 from collections import OrderedDict
 from datetime import date, datetime, time
 from enum import IntEnum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, NamedTuple
 
 import httpx
 from playwright.async_api import Browser, Playwright, async_playwright
@@ -56,23 +56,44 @@ class SectionTree(BaseModel):
     buildings: list[Building]
 
 
+type UUID = str
+
+
 class Reservation(BaseModel):
-    uuid: str
+    uuid: UUID
     section: str
     seat: str
     start: datetime
     end: datetime
     status: LibicService.Status
+    dev_id: str
+    room_id: str
+    sign_time: datetime | None = None
+    leave_deadline: datetime | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Reservation:
+    def from_dict(cls, service: LibicService, data: dict[str, Any]) -> Reservation:
+        device = data["resvDevInfoList"][0]
+        sign = data.get("signTime") or next(
+            (
+                m.get("signTime")
+                for m in data.get("resvMemberInfoList") or []
+                if m.get("logonName") == service.config.user.account
+            ),
+            None,
+        )
+        deadline = data.get("tempLeaveEndTime")
         return Reservation(
             uuid=data["uuid"],
             section=data["resvDevInfoList"][0].get("roomName", "Unknown Section"),
             seat=data["resvDevInfoList"][0]["devName"],
             start=LibicService.from_timestamp(data["resvBeginTime"]),
             end=LibicService.from_timestamp(data["resvEndTime"]),
-            status=LibicService.Status(data.get("resvStatus", 0)),
+            status=data.get("resvStatus", 0),
+            dev_id=str(device.get("devId", "")),
+            room_id=str(device.get("roomId", "")),
+            sign_time=LibicService.from_timestamp(sign) if sign else None,
+            leave_deadline=LibicService.from_timestamp(deadline) if deadline else None,
         )
 
 
@@ -85,6 +106,7 @@ class LibicService:
         STARTED_NOT_SIGNED = 1029
         IN_USE = 1093
         TEMP_LEAVE = 3141
+        TEMP_LEAVE_VIOLATED = 3281
 
     STATUS_MAP: ClassVar[dict[int, str]] = {
         Status.ENDED_NATURALLY: "已结束",  # 预约时间已到自然结束
@@ -94,12 +116,14 @@ class LibicService:
         Status.STARTED_NOT_SIGNED: "已开始",  # 未签到
         Status.IN_USE: "使用中",
         Status.TEMP_LEAVE: "暂离",
+        Status.TEMP_LEAVE_VIOLATED: "暂离超时违约",
     }
 
     def __init__(self, config: Config) -> None:
         self.config = config
         self.account = config.user.account
         self.encrypted_password = config.user.encrypted_password
+        self._user_info: dict | None = None
 
         # We will use an async client since playwright flow is async
         self.client = httpx.AsyncClient(
@@ -117,7 +141,7 @@ class LibicService:
         try:
             response = await self.client.get(LIBIC_URL, follow_redirects=False)
             response.raise_for_status()
-            logger.info("Successfully connected to LIBIC service.")
+            logger.debug("Successfully connected to LIBIC service.")
         except Exception as e:
             logger.error(f"Failed to connect to LIBIC service: {e}")
             raise ConnectionError(f"Failed to connect to LIBIC service: {e}") from e
@@ -198,7 +222,7 @@ class LibicService:
         """
         Executes the playwright login flow to retrieve libic cookies.
         """
-        logger.info("Starting Libic Playwright login flow...")
+        logger.debug("Starting Libic Playwright login flow...")
         async with (
             async_playwright() as p,
             await self._get_browser(p) as browser,
@@ -265,7 +289,7 @@ class LibicService:
 
         # configure client headers for modifying endpoints
         self.client.headers.update({"token": self._user_info["token"], "lan": "1"})
-        logger.info("Successfully logged into Libic.")
+        logger.debug("Successfully logged into Libic.")
 
     @classmethod
     async def from_login(cls, config: Config) -> LibicService:
@@ -273,7 +297,11 @@ class LibicService:
         LibicService constructor that performs the login flow.
         """
         service = cls(config)
-        await service.login()
+        try:
+            await service.login()
+        except BaseException:
+            await service.aclose()
+            raise
         return service
 
     def export_session(self) -> dict[str, Any]:
@@ -313,7 +341,7 @@ class LibicService:
         resp = await self.client.get(LIBIC_API.join("pad/updateTime"))
         resp.raise_for_status()
         server_ts = resp.json()
-        return datetime.fromtimestamp(server_ts / 1000)
+        return self.from_timestamp(server_ts)
 
     async def get_room_seats(self, room_id: str, date: date) -> list[dict]:
         """
@@ -332,6 +360,8 @@ class LibicService:
         except Exception as e:
             raise ServiceError("Unexpected error fetching room seats") from e
         resp = response.json()
+        if resp.get("code") != 0:
+            raise ServiceError(f"Failed to fetch room seats: {resp.get('message')}")
         return resp.get("data") or []
 
     async def list_reservations(
@@ -360,8 +390,12 @@ class LibicService:
             raise ServiceError(f"Failed to fetch reservations: {e}") from e
         except Exception as e:
             raise ServiceError("Unexpected error fetching reservations") from e
+        data = response.json()
+        if data.get("code") != 0:
+            raise ServiceError(f"Failed to fetch reservations: {data.get('message')}")
         reservations: list[Reservation] = [
-            Reservation.from_dict(r) for r in response.json().get("data", [])
+            Reservation.from_dict(self, reservation)
+            for reservation in data.get("data") or []
         ]
         if filter is not None:
             reservations = [r for r in reservations if r.status == filter]
@@ -369,7 +403,7 @@ class LibicService:
 
     async def reserve_seat(
         self, dev_id: str, start: time, end: time, date: date = date.today()
-    ) -> dict:
+    ) -> Reservation:
 
         start_dt = datetime.combine(date, start)
         end_dt = datetime.combine(date, end)
@@ -404,10 +438,31 @@ class LibicService:
             resp.raise_for_status()
         except httpx.HTTPError as e:
             raise ServiceError(f"预约失败: {e}") from e
-        data = resp.json()
+        data: dict = resp.json()
         if data.get("code") != 0:
             raise ServiceError(f"预约失败: {data.get('message')}")
-        return data
+        reservation = data.get("data")
+        if not isinstance(reservation, dict):
+            raise ServiceError("预约成功响应缺少预约数据")
+        return Reservation.from_dict(self, reservation)
+
+    async def get_min_reservation_minutes(self, reservation: Reservation) -> int:
+        """读取预约座位当前规则中的最短预约时长。"""
+        seats = await self.get_room_seats(reservation.room_id, reservation.start.date())
+        seat = next(
+            (
+                item
+                for item in seats
+                if str(item.get("devId", "")) == reservation.dev_id
+            ),
+            None,
+        )
+        if seat is None:
+            raise ServiceError(f"未找到座位规则: {reservation.seat}")
+        minimum = (seat.get("resvRule") or {}).get("minResvTime")
+        if not isinstance(minimum, int) or minimum <= 0:
+            raise ServiceError(f"座位最短预约时长无效: {minimum}")
+        return minimum
 
     async def get_seat_menu_tree(self) -> SectionTree:
         """Fetch the nested building -> floor -> section."""
@@ -482,7 +537,48 @@ class LibicService:
             raise ServiceError(f"End reservation failed: {data.get('message')}")
         return data
 
+    async def get_library_stats(self) -> dict[str, Any]:
+        """Get library statistics with available seats and used seats."""
+        try:
+            resp = await self.client.get(LIBIC_API.join("seatDevice/resvStatus"))
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            raise ServiceError(f"Failed to fetch library stats: {e}") from e
+        data = resp.json()
+        if data.get("code") != 0:
+            raise ServiceError(f"Failed to fetch library stats: {data.get('message')}")
+        return data.get("data", {})
+
+    class OpenScope(NamedTuple):
+        start: time
+        end: time
+
+    async def get_open_scope(self, room_id: str, date: date) -> OpenScope:
+        try:
+            resp = await self.client.get(
+                LIBIC_API.join("seatRoom/openScope"),
+                params={"roomId": room_id},
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            raise ServiceError(f"Failed to fetch open scope: {e}") from e
+        data = resp.json()
+        if data.get("code") != 0:
+            raise ServiceError(f"Failed to fetch open scope: {data.get('message')}")
+        data = data.get("data", {})
+        for entry in data:
+            if entry.get("dayOfWeek") == date.weekday():  # 0=Mon ... 6=Sun, matches API
+                start, end = entry.get("firstTime")
+                return self.OpenScope(
+                    start=datetime.strptime(start, "%H:%M").time(),
+                    end=datetime.strptime(end, "%H:%M").time(),
+                )
+        raise ServiceError("Failed to find open scope for the given date.")
+
     @staticmethod
     def from_timestamp(ts: int) -> datetime:
         """Convert server timestamp (in milliseconds) to datetime."""
         return datetime.fromtimestamp(ts / 1000)
+
+    async def aclose(self) -> None:
+        await self.client.aclose()
