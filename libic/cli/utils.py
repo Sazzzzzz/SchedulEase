@@ -91,7 +91,7 @@ async def get_libic_service(
     if needs_login:
         logger.debug("No valid session found. Logging in...")
         if not interactive:
-            logger.info("正在登录图书馆系统…")
+            logger.debug("正在登录图书馆系统")
         try:
             with (
                 console.status("[green]正在登录图书馆系统…", spinner="dots")
@@ -119,7 +119,7 @@ async def get_libic_service(
                 "[bold green]成功登陆！[/bold green][dim]本次登录已保存。后续命令将无需重新登录。[/dim]",
             )
         else:
-            logger.info("登录成功，会话已保存")
+            logger.debug("登录成功，会话已保存")
     else:
         service = LibicService.from_session(config, session_data)
 

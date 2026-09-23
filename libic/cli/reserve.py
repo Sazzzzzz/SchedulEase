@@ -139,11 +139,22 @@ async def reserve_seat(
     if section_id:
         (open_t, close_t) = await service.get_open_scope(section_id, date_t)
         if not (open_t <= start_t < end_t <= close_t):
+            clamped_start, clamped_end = max(start_t, open_t), min(end_t, close_t)
+
+            if clamped_start >= clamped_end:
+                console.print(
+                    f"[bold red]预约失败：请求的预约时间不在图书馆开放时间 {open_t} - {close_t} 内[/bold red]"
+                )
+                raise Exit(1)
+            # todo: change all `confirm` to click components
             confirm(
-                f"Warning: The requested reservation time {start_t} - {end_t} is outside the library's open hours {open_t} - {close_t}. Do you want to proceed?",
+                f"提示：请求的预约时间 {start_t.strftime('%H:%M')} - {end_t.strftime('%H:%M')} 不在图书馆开放时间 {open_t.strftime('%H:%M')} - {close_t.strftime('%H:%M')} 内。您是否要预约 {clamped_start.strftime('%H:%M')} - {clamped_end.strftime('%H:%M')}？",
                 abort=True,
-                default=False,
+                default=True,
             )
+
+            start_t = clamped_start
+            end_t = clamped_end
     console.print(
         f"[bold yellow]正在预约时段 {start_t} 到 {end_t} 的座位 {dev_id} ...[/bold yellow]"
     )
