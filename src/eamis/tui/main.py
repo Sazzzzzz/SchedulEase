@@ -9,14 +9,14 @@ from enum import Enum, auto
 from prompt_toolkit import Application
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 
-from ...common.config import CONFIG_PATH, load_config
-from ..service import CachedService, EamisService
-from ..utils import AppEvent, Course, EventBus
-from .base_view import View
-from .config_view import ConfigView
-from .election_view import ElectionView
-from .main_view import LogLevel, MainView
-from .schedule_view import ScheduleView
+from common.config import CONFIG_PATH, load_config
+from eamis.service import CachedService, EamisService
+from eamis.utils import AppEvent, Course, EventBus
+from eamis.tui.base_view import View
+from eamis.tui.config_view import ConfigView
+from eamis.tui.election_view import ElectionView
+from eamis.tui.main_view import LogLevel, MainView
+from eamis.tui.schedule_view import ScheduleView
 
 
 class SetupError(Exception):
@@ -103,7 +103,7 @@ class MainApp(Application):
         self.config = config
         # Check for test arg
         if test:
-            from ...tests.dummy_service import DummyEamisService
+            from tests.dummy_service import DummyEamisService
 
             self.service = DummyEamisService(config)
         else:

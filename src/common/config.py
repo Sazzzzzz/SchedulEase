@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
-from .exceptions import ConfigError
+from common.exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()

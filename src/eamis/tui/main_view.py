@@ -16,8 +16,8 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
 
-from ..utils import AppEvent, EventBus
-from .base_view import View
+from eamis.utils import AppEvent, EventBus
+from eamis.tui.base_view import View
 
 
 class LogLevel(Enum):

@@ -95,12 +95,33 @@
     安装完成后，直接在终端中输入命令即可启动：
 
     ```bash
-    schedulease
+        eamis --help
+        libic --help
     ```
 
 ## 项目架构
 
-*To be added...*
+项目使用标准的 `src` 布局。源码目录和安装后的导入路径保持一致：
+
+```text
+src/
+├── common/       # 共享配置和异常
+├── eamis/        # 教务系统和 TUI
+├── libic/        # 图书馆 CLI
+└── tests/        # 测试模式服务及其数据
+```
+
+`pyproject.toml` 将 `src` 配置为包根目录，因此开发环境和安装后的环境都使用
+顶层包导入路径（例如 `eamis.*` 和 `libic.*`）。安装完成后，两个入口点分别是：
+
+```bash
+eamis --help
+libic --help
+```
+
+在 VS Code 中选择项目的 `.venv/bin/python`（Windows 为 `.venv\\Scripts\\python.exe`），
+然后运行 `uv sync`；不需要再把仓库根目录或 `site-packages` 手动加入
+`python.analysis.extraPaths`。
 
 ## 开发者笔记
 

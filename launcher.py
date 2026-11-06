@@ -5,7 +5,7 @@ Patches runtime paths for onefile and delegates to main:main.
 """
 
 # Build command
-# nuitka --standalone --onefile --output-dir=dist --output-filename=schedulease.exe --include-data-file=python/tests/test_data.json=tests/test_data.json --follow-imports --plugin-enable=anti-bloat --msvc=latest python/launcher.py
+# nuitka --standalone --onefile --output-dir=dist --output-filename=schedulease.exe --include-data-file=src/tests/test_data.json=tests/test_data.json --follow-imports --plugin-enable=anti-bloat --msvc=latest launcher.py
 
 import os
 import sys
@@ -20,14 +20,14 @@ def _exe_dir() -> Path:
 def _patch_paths() -> None:
     exe_dir = _exe_dir()
 
-    # Ensure the package root is importable. Our package dir is 'python/'.
-    pkg_dir = Path(__file__).parent  # .../python
-    workspace_root = pkg_dir.parent  # repo root
-    if str(workspace_root) not in sys.path:
-        sys.path.insert(0, str(workspace_root))
+    # Ensure the src-layout package is importable for a source checkout.
+    project_root = Path(__file__).parent
+    src_dir = project_root / "src"
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
 
     # Patch config constants before importing main
-    import utils.config as config
+    import common.config as config
 
     data_path = exe_dir / "data"
     config_path = data_path / "config.toml"
@@ -39,7 +39,7 @@ def _patch_paths() -> None:
 
 def main() -> None:
     _patch_paths()
-    from main import main as run
+    from eamis.tui.main import main as run
 
     run()
 

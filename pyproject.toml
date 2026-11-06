@@ -5,34 +5,41 @@ description = "A TUI program for scheduling course elections in NKU"
 readme = "README.md"
 license = "Unlicense"
 license-files = ["LICENSE"]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "bs4>=0.0.2",
+    "click>=8.5.0",
     "hjson>=3.1.0",
     "httpx[socks]>=0.28.1",
-    "lxml>=6.0.0",
+    "lxml>=7.0.0b1",
     "pathlib>=1.0.1",
-    "playwright>=1.58.0",
-    "polars>=1.31.0",
-    "prompt-toolkit>=3.0.51",
-    "pycryptodome>=3.23.0",
-    "pydantic>=2.12.5",
+    "playwright>=1.64.1",
+    "polars>=2.1.0",
+    "prompt-toolkit>=3.0.53",
+    "pycryptodome>=4.3.0",
+    "pydantic>=2.14.3",
     "questionary>=2.1.1",
-    "rich>=14.0.0",
+    "rich>=15.0.0",
     "schedule>=1.2.2",
     "tomli-w>=1.2.0",
-    "typer>=0.24.1",
+    "typer>=0.27.3",
 ]
 
 [project.optional-dependencies]
 dev = ["jupyter>=1.1.1", "nuitka>=2.7.13"]
 
 [tool.setuptools]
-package-dir = { "schedulease" = "." }
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"tests" = ["test_data.json"]
 
 [project.scripts]
-eamis = "schedulease.eamis.tui.main:main"
-libic = "schedulease.libic.cli.main:main"
+eamis = "eamis.tui.main:main"
+libic = "libic.cli.main:main"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

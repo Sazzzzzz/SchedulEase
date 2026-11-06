@@ -27,9 +27,9 @@ import httpx
 import polars as pl
 from bs4 import BeautifulSoup, Tag
 
-from ..common.config import DATA_PATH, Config, load_config
-from ..common.exceptions import ElectError, LoginError, ParseError, ServiceError
-from .utils import Course
+from common.config import DATA_PATH, Config, load_config
+from common.exceptions import ElectError, LoginError, ParseError, ServiceError
+from eamis.utils import Course
 
 # API URLs
 LOGIN_URL = httpx.URL("https://iam.nankai.edu.cn")

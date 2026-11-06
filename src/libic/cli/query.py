@@ -4,8 +4,8 @@ from rich.console import Console
 from rich.table import Table
 from typer import Argument, Exit
 
-from ..cli.utils import SESSION_FILE
-from ..service import LibicService
+from libic.cli.utils import SESSION_FILE
+from libic.service import LibicService
 
 console = Console()
 

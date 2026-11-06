@@ -6,7 +6,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 from typer import Argument, Exit, Option, confirm
 
-from ..service import LibicService, Reservation
+from libic.service import LibicService, Reservation
 
 console = Console()
 

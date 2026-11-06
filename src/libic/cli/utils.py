@@ -7,13 +7,13 @@ from contextlib import nullcontext
 from datetime import datetime, timedelta
 from typing import Any, Concatenate
 
-from click import get_current_context
 from rich.console import Console
 from rich.panel import Panel
+from typer._click.globals import get_current_context
 
-from ...common.config import DATA_PATH, Config, load_config
-from ...common.exceptions import LoginError
-from ..service import LibicService
+from common.config import DATA_PATH, Config, load_config
+from common.exceptions import LoginError
+from libic.service import LibicService
 
 SESSION_FILE = DATA_PATH / "session.json"
 logger = logging.getLogger(__name__)

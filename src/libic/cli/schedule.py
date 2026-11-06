@@ -16,11 +16,11 @@ from click import confirm
 from rich.console import Console
 from typer import Argument, Exit, Option
 
-from ...common.config import Config
-from ...common.exceptions import ServiceError
-from ..service import LibicService, Reservation
-from .reserve import _validate
-from .utils import get_libic_service
+from common.config import Config
+from common.exceptions import ServiceError
+from libic.cli.reserve import _validate
+from libic.cli.utils import get_libic_service
+from libic.service import LibicService, Reservation
 
 logger = logging.getLogger(__name__)
 console = Console()

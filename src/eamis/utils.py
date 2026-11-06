@@ -12,7 +12,7 @@ import polars as pl
 # ----- Utilities for Core Services -----
 
 if TYPE_CHECKING:
-    from .service import EamisServiceProtocol as Service
+    from eamis.service import EamisServiceProtocol as Service
 
 
 class Weekdays(Enum):

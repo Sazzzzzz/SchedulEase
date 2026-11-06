@@ -1,0 +1,1 @@
+"""EAMIS terminal user interface."""

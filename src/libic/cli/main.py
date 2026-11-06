@@ -12,15 +12,15 @@ import logging
 from rich.logging import RichHandler
 from typer import Context, Typer
 
-from .query import clear_cache, confirm_status, list_seats, print_sections
-from .reserve import (
+from libic.cli.query import clear_cache, confirm_status, list_seats, print_sections
+from libic.cli.reserve import (
     cancel_reservation,
     end_reservation,
     list_reservations,
     reserve_seat,
 )
-from .schedule import auto, schedule_reservation, watch
-from .utils import adapter
+from libic.cli.schedule import auto, schedule_reservation, watch
+from libic.cli.utils import adapter
 
 logger = logging.getLogger(__name__)
 

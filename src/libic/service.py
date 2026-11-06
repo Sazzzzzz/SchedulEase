@@ -14,8 +14,8 @@ import httpx
 from playwright.async_api import Browser, Playwright, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..common.config import Config
-from ..common.exceptions import LoginError, ServiceError
+from common.config import Config
+from common.exceptions import LoginError, ServiceError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
