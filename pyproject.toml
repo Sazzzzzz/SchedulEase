@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["jupyter>=1.1.1", "nuitka>=2.7.13"]
+dev = ["jupyter>=1.1.1"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }

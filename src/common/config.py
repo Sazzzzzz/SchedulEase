@@ -13,7 +13,7 @@ from common.exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
 SCRIPT_DIR = Path(__file__).parent.resolve()
-DATA_PATH = SCRIPT_DIR.parent / "data"
+DATA_PATH = SCRIPT_DIR.parent.parent / "data"
 CONFIG_PATH = DATA_PATH / "config.toml"
 
 
