@@ -12,6 +12,7 @@ import logging
 from rich.logging import RichHandler
 from typer import Context, Typer
 
+from libic.cli.config import config
 from libic.cli.query import clear_cache, confirm_status, list_seats, print_sections
 from libic.cli.reserve import (
     cancel_reservation,
@@ -26,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 app = Typer(help="NKU 图书馆预约助手", add_completion=False)
 
+# --- config ---
+app.command(name="config")(config)
 # --- utils ---
 app.command(name="status")(adapter(confirm_status))
 app.command(name="clean")(adapter(clear_cache))
