@@ -251,7 +251,12 @@ async def reschedule_task(
         logger.info("保护任务已取消：%s (%s)", original.seat, original.uuid)
         raise
     except Exception as error:
-        logger.error("%s 保护失败：%s", original.seat, error)
+        logger.exception(
+            "%s 保护失败（%s：%r）",
+            original.seat,
+            type(error).__name__,
+            error,
+        )
 
 
 async def _replace_reservation(
@@ -309,12 +314,13 @@ async def _replace_reservation(
             loop, coordinator, replacement, await service.get_server_time()
         )
     except Exception as error:
-        logger.error(
-            "%s：%s；目标 %s–%s；%s。停止该预约链，不重试。",
+        logger.exception(
+            "%s：%s；目标 %s–%s；异常 %s：%r。",
             reservation.seat,
             old_result,
             new_start,
             reservation.end,
+            type(error).__name__,
             error,
         )
 
@@ -378,7 +384,11 @@ async def monitor_task(
     except asyncio.CancelledError:
         raise
     except Exception as error:
-        logger.error("巡检失败：%s；下一轮继续", error)
+        logger.exception(
+            "巡检失败（%s：%r）；将继续巡检",
+            type(error).__name__,
+            error,
+        )
 
     next_run = _next_check(
         coordinator.config,
@@ -492,11 +502,12 @@ async def daily_task(
                         await service.get_server_time(),
                     )
             except Exception as error:
-                logger.error(
-                    "%s %s %s 预约失败：%s；不重试",
+                logger.exception(
+                    "%s %s %s 预约失败（%s：%r）",
                     plan.section,
                     plan.seat,
                     start,
+                    type(error).__name__,
                     error,
                 )
         logger.info("每日任务处理完成：%s", target)
@@ -511,7 +522,12 @@ async def daily_task(
     except asyncio.CancelledError:
         raise
     except Exception as error:
-        logger.error("每日任务 %s 失败：%s；不重试，继续安排下一天", day, error)
+        logger.exception(
+            "每日任务 %s 失败（%s：%r）",
+            day,
+            type(error).__name__,
+            error,
+        )
     finally:
         next_day = day + timedelta(days=1)
         coordinator.spawn(
@@ -636,5 +652,5 @@ async def schedule_reservation(
             task_name=f"定时预约 {section_name or ''} {seat_name or seat_id} {reserve_date}",
         )
     except Exception as error:
-        logger.error(f"预约失败：{error}")
+        logger.exception("预约失败（%s：%r）", type(error).__name__, error)
         raise Exit(1) from error
