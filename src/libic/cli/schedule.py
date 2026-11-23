@@ -1,11 +1,6 @@
-"""LIBIC 的定时预约和预约保护。
-
-后台有三类一次性任务：daily、monitor 和 reschedule。每个任务执行一轮并自行
-注册后继任务；auto/watch 入口只负责启动和统一清理。
-"""
-
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable, Coroutine
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -27,6 +22,7 @@ console = Console()
 
 type TaskKind = Literal["daily", "monitor", "reschedule"]
 type AsyncAction = Callable[[LibicService], Awaitable[Any]]
+type PreparationAction = Callable[[LibicService], Awaitable[Any]]
 
 ACTIVE = {
     LibicService.Status.NOT_STARTED,
@@ -41,6 +37,47 @@ class ReschedulePlan:
     reservation: Reservation
     deadline: datetime
     execute_at: datetime
+
+
+@dataclass(frozen=True)
+class Calibration:
+    server_at_sample: datetime
+    monotonic_at_sample: float
+    server_minus_local_seconds: float
+
+    def deadline(self, server_time: datetime, margin_seconds: float = 0) -> float:
+        return (
+            self.monotonic_at_sample
+            + (server_time - self.server_at_sample).total_seconds()
+            + margin_seconds
+        )
+
+
+@dataclass(frozen=True)
+class PreparedReservation:
+    section: str
+    seat: str
+    dev_id: str
+    start: datetime
+    end: datetime
+
+
+async def calibrate(service: LibicService) -> Calibration:
+    """Estimate the server clock once using the request round-trip midpoint."""
+    monotonic_before = time.monotonic()
+    wall_before = time.time()
+    server_time = await service.get_server_time()
+    wall_after = time.time()
+    monotonic_after = time.monotonic()
+    wall_midpoint = (wall_before + wall_after) / 2
+    monotonic_midpoint = (monotonic_before + monotonic_after) / 2
+    offset = server_time.timestamp() - wall_midpoint
+    logger.info("服务端时钟偏移：%+.3f 秒", offset)
+    return Calibration(server_time, monotonic_midpoint, offset)
+
+
+async def _sleep_until(deadline: float) -> None:
+    await asyncio.sleep(max(0, deadline - time.monotonic()))
 
 
 @dataclass
@@ -105,27 +142,74 @@ async def session(coordinator: Coordinator):
             await fresh.aclose()
 
 
-async def run_at(
+async def _run_at_server_time(
     coordinator: Coordinator,
     when: datetime,
     action: AsyncAction,
     task_name: str = "定时任务",
+    *,
+    prepare_action: PreparationAction | None = None,
 ) -> Any:
-    """按服务端时间等待，临近执行时刷新会话并重新校时。"""
+    """Wait using a fresh server-time sample."""
+    prepare = when - timedelta(minutes=coordinator.config.libic.prepare_minutes)
     async with session(coordinator) as libic:
         now = await libic.get_server_time()
-    prepare = when - timedelta(minutes=coordinator.config.libic.prepare_minutes)
     await asyncio.sleep(max(0, (prepare - now).total_seconds()))
 
     logger.info("%s：开始准备会话，执行时间 %s", task_name, when)
     async with session(coordinator) as libic:
         now = await libic.get_server_time()
+        if prepare_action is not None:
+            await prepare_action(libic)
 
     delay = timedelta(seconds=coordinator.config.libic.overshoot_seconds)
     await asyncio.sleep(max(0, (when - now + delay).total_seconds()))
     async with session(coordinator) as libic:
         logger.info("%s：开始执行", task_name)
         return await action(libic)
+
+
+async def _run_at_calibrated(
+    coordinator: Coordinator,
+    when: datetime,
+    action: AsyncAction,
+    task_name: str,
+    calibration: Calibration,
+    prepare_action: PreparationAction | None,
+) -> Any:
+    """Wait using a one-time calibration and the monotonic clock."""
+    prepare = when - timedelta(minutes=coordinator.config.libic.prepare_minutes)
+    await _sleep_until(calibration.deadline(prepare))
+
+    logger.info("%s：开始准备会话，执行时间 %s", task_name, when)
+    async with session(coordinator) as libic:
+        if prepare_action is not None:
+            await prepare_action(libic)
+
+    delay = timedelta(seconds=coordinator.config.libic.overshoot_seconds)
+    await _sleep_until(calibration.deadline(when, delay.total_seconds()))
+    async with session(coordinator) as libic:
+        logger.info("%s：开始执行", task_name)
+        return await action(libic)
+
+
+async def run_at(
+    coordinator: Coordinator,
+    when: datetime,
+    action: AsyncAction,
+    task_name: str = "定时任务",
+    *,
+    calibration: Calibration | None = None,
+    prepare_action: PreparationAction | None = None,
+) -> Any:
+    """Wait using server time or a calibrated monotonic deadline."""
+    if calibration is None:
+        return await _run_at_server_time(
+            coordinator, when, action, task_name, prepare_action=prepare_action
+        )
+    return await _run_at_calibrated(
+        coordinator, when, action, task_name, calibration, prepare_action
+    )
 
 
 def _reschedule_plan(
@@ -437,17 +521,19 @@ async def daily_task(
     loop: asyncio.AbstractEventLoop,
     coordinator: Coordinator,
     day: date,
+    calibration: Calibration,
 ) -> None:
     """第一类任务：处理一天的周计划，并注册下一天的 daily。"""
     send_at = datetime.combine(day, coordinator.config.libic.send_time)
+    target = day + timedelta(days=coordinator.config.libic.advance_days)
+    prepared: list[PreparedReservation] = []
 
-    async def reserve(service: LibicService) -> None:
+    async def prepare(service: LibicService) -> None:
         now = await service.get_server_time()
         if now.date() != day:
             logger.warning("每日任务已跨日，跳过 %s", day)
             return
 
-        target = day + timedelta(days=coordinator.config.libic.advance_days)
         plans = [
             plan
             for plan in coordinator.config.libic.weekly
@@ -486,14 +572,50 @@ async def daily_task(
                 end = datetime.combine(target, clamped_end)
 
             try:
-                if await service.get_server_time() >= start:
-                    raise ServiceError("已错过使用开始时间，跳过本次预约")
                 seats = await service.get_section_seats(sections[plan.section].id)
                 dev_id = str(seats[plan.seat]["devId"])
-                reservation = await service.reserve_seat(
-                    dev_id, plan.start, plan.end, target
+                prepared.append(
+                    PreparedReservation(
+                        plan.section,
+                        plan.seat,
+                        dev_id,
+                        start,
+                        end,
+                    )
                 )
-                logger.info("%s %s 已预约 %s–%s", plan.section, plan.seat, start, end)
+            except Exception as error:
+                logger.exception(
+                    "%s %s %s 准备预约失败（%s：%r）",
+                    plan.section,
+                    plan.seat,
+                    start,
+                    type(error).__name__,
+                    error,
+                )
+        logger.info("每日任务准备完成：%s，已准备 %d 条预约", target, len(prepared))
+
+    async def reserve(service: LibicService) -> None:
+        if (
+            prepared
+            and target == day
+            and await service.get_server_time() >= min(item.start for item in prepared)
+        ):
+            raise ServiceError("已错过使用开始时间，跳过本次预约")
+        for item in prepared:
+            try:
+                reservation = await service.reserve_seat(
+                    item.dev_id,
+                    item.start.time(),
+                    item.end.time(),
+                    item.start.date(),
+                )
+                logger.info(
+                    "%s %s 已预约 %s–%s",
+                    item.section,
+                    item.seat,
+                    item.start,
+                    item.end,
+                )
                 if coordinator.protect_leave or coordinator.protect_start:
                     _schedule_reschedule(
                         loop,
@@ -504,13 +626,12 @@ async def daily_task(
             except Exception as error:
                 logger.exception(
                     "%s %s %s 预约失败（%s：%r）",
-                    plan.section,
-                    plan.seat,
-                    start,
+                    item.section,
+                    item.seat,
+                    item.start,
                     type(error).__name__,
                     error,
                 )
-        logger.info("每日任务处理完成：%s", target)
 
     logger.info(
         "每日任务已创建：%s 发送，预约 %s",
@@ -518,7 +639,14 @@ async def daily_task(
         day + timedelta(days=coordinator.config.libic.advance_days),
     )
     try:
-        await run_at(coordinator, send_at, reserve, task_name=f"每日预约 {day}")
+        await run_at(
+            coordinator,
+            send_at,
+            reserve,
+            task_name=f"每日预约 {day}",
+            calibration=calibration,
+            prepare_action=prepare,
+        )
     except asyncio.CancelledError:
         raise
     except Exception as error:
@@ -534,7 +662,7 @@ async def daily_task(
             loop,
             "daily",
             "daily",
-            daily_task(loop, coordinator, next_day),
+            daily_task(loop, coordinator, next_day, calibration),
             when=datetime.combine(next_day, coordinator.config.libic.send_time),
         )
 
@@ -557,7 +685,8 @@ async def auto(
         protect_leave=not (no_watch or no_leave),
         protect_start=not (no_watch or no_start),
     )
-    now = await service.get_server_time()
+    calibration = await calibrate(service)
+    now = calibration.server_at_sample
     await service.aclose()
     logger.info(
         "自动预约已启动：发现 %d 条预约计划，暂离保护=%s，签到保护=%s",
@@ -565,7 +694,12 @@ async def auto(
         coordinator.protect_leave,
         coordinator.protect_start,
     )
-    coordinator.spawn(loop, "daily", "daily", daily_task(loop, coordinator, now.date()))
+    coordinator.spawn(
+        loop,
+        "daily",
+        "daily",
+        daily_task(loop, coordinator, now.date(), calibration),
+    )
     if coordinator.protect_leave or coordinator.protect_start:
         coordinator.spawn(loop, "monitor", "monitor", monitor_task(loop, coordinator))
     try:

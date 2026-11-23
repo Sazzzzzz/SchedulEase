@@ -69,10 +69,7 @@ class Test:
         )
 
         self.login_status = json.loads(login_response.content)
-        if self.login_status.get("code") == 0:
-            return True
-        else:
-            return False
+        return self.login_status.get("code") == 0
 
     def execute(self) -> bool:
         after_login = self.session.get(
@@ -86,10 +83,7 @@ class Test:
         )
         soup = BeautifulSoup(course_select.content, "html.parser")
         # print(soup)
-        if "进入选课" in soup.text:
-            return True
-        else:
-            return False
+        return "进入选课" in soup.text
 
 
 def bisect(min: int, max: int, precision: int = 1):

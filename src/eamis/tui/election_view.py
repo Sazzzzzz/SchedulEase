@@ -32,8 +32,8 @@ from rich.table import Table
 from rich.text import Text
 
 from eamis.service import EamisServiceProtocol
-from eamis.utils import AppEvent, Course, EventBus, Weekdays
 from eamis.tui.base_view import View
+from eamis.utils import AppEvent, Course, EventBus, Weekdays
 
 
 class State(Enum):

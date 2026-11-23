@@ -101,14 +101,14 @@ class WeeklyReservation(BaseModel):
 class LibicConfig(BaseModel):
     browser: str = "edge"
     headless: bool = False
-    prepare_minutes: float = Field(default=1.0, ge=0, allow_inf_nan=False)
-    overshoot_seconds: float = Field(default=3.0, ge=0, allow_inf_nan=False)
-    check_minutes: float = Field(default=55.0, gt=0, allow_inf_nan=False)
+    prepare_minutes: float = 1.0
+    overshoot_seconds: float = 0.05
+    check_minutes: float = 55.0
     check_start: time = time(7)
     check_end: time = time(23)
-    protect_minutes: float = Field(default=1.0, gt=0, allow_inf_nan=False)
-    rebook_minutes: float = Field(default=30.0, gt=0, allow_inf_nan=False)
-    advance_days: int = Field(default=1, ge=0)
+    protect_minutes: float = 1.0
+    rebook_minutes: float = 30.0
+    advance_days: int = 1
     send_time: time = time(21)
     weekly: list[WeeklyReservation] = Field(default_factory=list)
 

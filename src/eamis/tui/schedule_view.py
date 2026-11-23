@@ -32,8 +32,8 @@ from rich.table import Table
 from rich.text import Text
 
 from eamis.service import EamisService
-from eamis.utils import AppEvent, Course, EventBus
 from eamis.tui.base_view import View
+from eamis.utils import AppEvent, Course, EventBus
 
 logger = logging.getLogger(__name__)
 

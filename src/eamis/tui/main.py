@@ -11,12 +11,12 @@ from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 
 from common.config import CONFIG_PATH, load_config
 from eamis.service import CachedService, EamisService
-from eamis.utils import AppEvent, Course, EventBus
 from eamis.tui.base_view import View
 from eamis.tui.config_view import ConfigView
 from eamis.tui.election_view import ElectionView
 from eamis.tui.main_view import LogLevel, MainView
 from eamis.tui.schedule_view import ScheduleView
+from eamis.utils import AppEvent, Course, EventBus
 
 
 class SetupError(Exception):

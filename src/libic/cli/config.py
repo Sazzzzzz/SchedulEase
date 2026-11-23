@@ -375,13 +375,10 @@ class Wizard:
         return account, self._password()
 
     def _password(self):
-        while True:
-            pwd = ask(
-                questionary.password, "密码", validate=VALIDATORS["blank"], style=STYLE
-            )
-            if pwd == ask(questionary.password, "确认密码", style=STYLE):
-                return pwd
-            console.print("[red]两次输入不一致，请重试[/red]")
+        pwd = ask(
+            questionary.password, "密码", validate=VALIDATORS["blank"], style=STYLE
+        )
+        return pwd
 
     def _browser(self):
         console.print("\n[bold blue]▍浏览器设置[/bold blue]")
