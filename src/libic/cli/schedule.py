@@ -174,15 +174,17 @@ async def _run_at_calibrated(
     when: datetime,
     action: AsyncAction,
     task_name: str,
-    calibration: Calibration,
     prepare_action: PreparationAction | None,
 ) -> Any:
-    """Wait using a one-time calibration and the monotonic clock."""
+    """Wait for preparation, then calibrate the active session before execution."""
     prepare = when - timedelta(minutes=coordinator.config.libic.prepare_minutes)
-    await _sleep_until(calibration.deadline(prepare))
+    async with session(coordinator) as libic:
+        now = await libic.get_server_time()
+    await asyncio.sleep(max(0, (prepare - now).total_seconds()))
 
     logger.info("%s：开始准备会话，执行时间 %s", task_name, when)
     async with session(coordinator) as libic:
+        calibration = await calibrate(libic)
         if prepare_action is not None:
             await prepare_action(libic)
 
@@ -199,16 +201,16 @@ async def run_at(
     action: AsyncAction,
     task_name: str = "定时任务",
     *,
-    calibration: Calibration | None = None,
+    calibrate_at_prepare: bool = False,
     prepare_action: PreparationAction | None = None,
 ) -> Any:
     """Wait using server time or a calibrated monotonic deadline."""
-    if calibration is None:
-        return await _run_at_server_time(
-            coordinator, when, action, task_name, prepare_action=prepare_action
+    if calibrate_at_prepare:
+        return await _run_at_calibrated(
+            coordinator, when, action, task_name, prepare_action
         )
-    return await _run_at_calibrated(
-        coordinator, when, action, task_name, calibration, prepare_action
+    return await _run_at_server_time(
+        coordinator, when, action, task_name, prepare_action=prepare_action
     )
 
 
@@ -521,7 +523,6 @@ async def daily_task(
     loop: asyncio.AbstractEventLoop,
     coordinator: Coordinator,
     day: date,
-    calibration: Calibration,
 ) -> None:
     """第一类任务：处理一天的周计划，并注册下一天的 daily。"""
     send_at = datetime.combine(day, coordinator.config.libic.send_time)
@@ -584,12 +585,11 @@ async def daily_task(
                     )
                 )
             except Exception as error:
-                logger.exception(
-                    "%s %s %s 准备预约失败（%s：%r）",
+                logger.error(
+                    "%s %s %s 准备预约失败\n%r",
                     plan.section,
                     plan.seat,
                     start,
-                    type(error).__name__,
                     error,
                 )
         logger.info("每日任务准备完成：%s，已准备 %d 条预约", target, len(prepared))
@@ -624,12 +624,11 @@ async def daily_task(
                         await service.get_server_time(),
                     )
             except Exception as error:
-                logger.exception(
-                    "%s %s %s 预约失败（%s：%r）",
+                logger.error(
+                    "%s %s %s 预约失败\n%r",
                     item.section,
                     item.seat,
                     item.start,
-                    type(error).__name__,
                     error,
                 )
 
@@ -644,16 +643,15 @@ async def daily_task(
             send_at,
             reserve,
             task_name=f"每日预约 {day}",
-            calibration=calibration,
+            calibrate_at_prepare=True,
             prepare_action=prepare,
         )
     except asyncio.CancelledError:
         raise
     except Exception as error:
-        logger.exception(
-            "每日任务 %s 失败（%s：%r）",
+        logger.error(
+            "每日任务 %s 失败\n%r",
             day,
-            type(error).__name__,
             error,
         )
     finally:
@@ -662,7 +660,7 @@ async def daily_task(
             loop,
             "daily",
             "daily",
-            daily_task(loop, coordinator, next_day, calibration),
+            daily_task(loop, coordinator, next_day),
             when=datetime.combine(next_day, coordinator.config.libic.send_time),
         )
 
@@ -685,8 +683,7 @@ async def auto(
         protect_leave=not (no_watch or no_leave),
         protect_start=not (no_watch or no_start),
     )
-    calibration = await calibrate(service)
-    now = calibration.server_at_sample
+    now = await service.get_server_time()
     await service.aclose()
     logger.info(
         "自动预约已启动：发现 %d 条预约计划，暂离保护=%s，签到保护=%s",
@@ -698,7 +695,7 @@ async def auto(
         loop,
         "daily",
         "daily",
-        daily_task(loop, coordinator, now.date(), calibration),
+        daily_task(loop, coordinator, now.date()),
     )
     if coordinator.protect_leave or coordinator.protect_start:
         coordinator.spawn(loop, "monitor", "monitor", monitor_task(loop, coordinator))

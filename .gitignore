@@ -26,3 +26,6 @@ data/
 
 # Rust build artifacts
 target/
+
+# log
+*.log
