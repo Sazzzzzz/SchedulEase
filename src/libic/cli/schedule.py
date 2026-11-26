@@ -44,11 +44,13 @@ class Calibration:
     server_at_sample: datetime
     monotonic_at_sample: float
     server_minus_local_seconds: float
+    rtt_seconds: float
 
     def deadline(self, server_time: datetime, margin_seconds: float = 0) -> float:
         return (
             self.monotonic_at_sample
             + (server_time - self.server_at_sample).total_seconds()
+            - self.rtt_seconds / 2
             + margin_seconds
         )
 
@@ -63,17 +65,30 @@ class PreparedReservation:
 
 
 async def calibrate(service: LibicService) -> Calibration:
-    """Estimate the server clock once using the request round-trip midpoint."""
-    monotonic_before = time.monotonic()
-    wall_before = time.time()
-    server_time = await service.get_server_time()
-    wall_after = time.time()
-    monotonic_after = time.monotonic()
-    wall_midpoint = (wall_before + wall_after) / 2
-    monotonic_midpoint = (monotonic_before + monotonic_after) / 2
-    offset = server_time.timestamp() - wall_midpoint
-    logger.info("服务端时钟偏移：%+.3f 秒", offset)
-    return Calibration(server_time, monotonic_midpoint, offset)
+    """Warm the connection, then use the lowest-RTT clock sample."""
+    await service.get_server_time()
+    samples: list[Calibration] = []
+    for index in range(5):
+        monotonic_before = time.monotonic()
+        wall_before = time.time()
+        server_time = await service.get_server_time()
+        wall_after = time.time()
+        monotonic_after = time.monotonic()
+        wall_midpoint = (wall_before + wall_after) / 2
+        monotonic_midpoint = (monotonic_before + monotonic_after) / 2
+        rtt = monotonic_after - monotonic_before
+        offset = server_time.timestamp() - wall_midpoint
+        samples.append(Calibration(server_time, monotonic_midpoint, offset, rtt))
+        if index < 4:
+            await asyncio.sleep(0.5)
+
+    calibration = min(samples, key=lambda sample: sample.rtt_seconds)
+    logger.info(
+        "服务端时钟偏移：%+.3f 秒，校准 RTT：%.1f ms",
+        calibration.server_minus_local_seconds,
+        calibration.rtt_seconds * 1000,
+    )
+    return calibration
 
 
 async def _sleep_until(deadline: float) -> None:
@@ -157,14 +172,14 @@ async def _run_at_server_time(
     await asyncio.sleep(max(0, (prepare - now).total_seconds()))
 
     logger.info("%s：开始准备会话，执行时间 %s", task_name, when)
+    # * note: this holds lock for libic minutes, and a libic session typically expires in 30 minutes, so `prepare_minutes` should not be too long.
     async with session(coordinator) as libic:
         now = await libic.get_server_time()
         if prepare_action is not None:
             await prepare_action(libic)
 
-    delay = timedelta(seconds=coordinator.config.libic.overshoot_seconds)
-    await asyncio.sleep(max(0, (when - now + delay).total_seconds()))
-    async with session(coordinator) as libic:
+        delay = timedelta(seconds=coordinator.config.libic.overshoot_seconds)
+        await asyncio.sleep(max(0, (when - now + delay).total_seconds()))
         logger.info("%s：开始执行", task_name)
         return await action(libic)
 
@@ -183,14 +198,13 @@ async def _run_at_calibrated(
     await asyncio.sleep(max(0, (prepare - now).total_seconds()))
 
     logger.info("%s：开始准备会话，执行时间 %s", task_name, when)
+    # * note: this holds lock for libic minutes, and a libic session typically expires in 30 minutes, so `prepare_minutes` should not be too long.
     async with session(coordinator) as libic:
         calibration = await calibrate(libic)
         if prepare_action is not None:
             await prepare_action(libic)
 
-    delay = timedelta(seconds=coordinator.config.libic.overshoot_seconds)
-    await _sleep_until(calibration.deadline(when, delay.total_seconds()))
-    async with session(coordinator) as libic:
+        await _sleep_until(calibration.deadline(when))
         logger.info("%s：开始执行", task_name)
         return await action(libic)
 

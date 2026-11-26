@@ -43,7 +43,11 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
-dev = ["jupyter>=1.1.1", "matplotlib>=3.11.2"]
+dev = [
+    "jupyter>=1.1.1",
+    "kittyplot>=0.1.0",
+    "matplotlib>=3.11.2",
+]
 
 
 [tool.ruff.lint]

@@ -905,6 +905,18 @@ wheels = [
 ]
 
 [[package]]
+name = "kittyplot"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/89/b0/e40742c4452cd65c21f2bd1d121a71859a0f37560d41c365431ef15b8744/kittyplot-0.1.0.tar.gz", hash = "sha256:2c5ba81247e6b40c79214dcba0853a89d1c7c209503c98db08ca30ee132d4c75", size = 9158, upload-time = "2026-05-09T03:19:45.724Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/9e/b49ada96e2b6cef5d653335733b47f3afd170e351f1e5220b39a961b3c4e/kittyplot-0.1.0-py3-none-any.whl", hash = "sha256:8ecd7179b559453a7dc4e60953f738fc2f393f237611d430c5be87ae747363de", size = 10171, upload-time = "2026-05-09T03:19:44.505Z" },
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1934,6 +1946,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "jupyter" },
+    { name = "kittyplot" },
     { name = "matplotlib" },
 ]
 
@@ -1960,6 +1973,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "kittyplot", specifier = ">=0.1.0" },
     { name = "matplotlib", specifier = ">=3.11.2" },
 ]
 
