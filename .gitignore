@@ -17,7 +17,7 @@ nuitka-crash-report.xml
 
 # Custom files
 _reference/
-test.*
+test*.*
 .DS_Store
 data/
 .vscode/

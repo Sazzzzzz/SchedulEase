@@ -25,9 +25,6 @@ dependencies = [
     "typer>=0.27.3",
 ]
 
-[project.optional-dependencies]
-dev = ["jupyter>=1.1.1"]
-
 [tool.setuptools]
 package-dir = { "" = "src" }
 
@@ -44,6 +41,10 @@ libic = "libic.cli.main:main"
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = ["jupyter>=1.1.1", "matplotlib>=3.11.2"]
+
 
 [tool.ruff.lint]
 select = [
