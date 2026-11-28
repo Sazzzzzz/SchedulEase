@@ -157,7 +157,7 @@ async def session(coordinator: Coordinator):
             await fresh.aclose()
 
 
-async def _run_at_server_time(
+async def run_at(
     coordinator: Coordinator,
     when: datetime,
     action: AsyncAction,
@@ -165,33 +165,7 @@ async def _run_at_server_time(
     *,
     prepare_action: PreparationAction | None = None,
 ) -> Any:
-    """Wait using a fresh server-time sample."""
-    prepare = when - timedelta(minutes=coordinator.config.libic.prepare_minutes)
-    async with session(coordinator) as libic:
-        now = await libic.get_server_time()
-    await asyncio.sleep(max(0, (prepare - now).total_seconds()))
-
-    logger.info("%s：开始准备会话，执行时间 %s", task_name, when)
-    # * note: this holds lock for libic minutes, and a libic session typically expires in 30 minutes, so `prepare_minutes` should not be too long.
-    async with session(coordinator) as libic:
-        now = await libic.get_server_time()
-        if prepare_action is not None:
-            await prepare_action(libic)
-
-        delay = timedelta(seconds=coordinator.config.libic.overshoot_seconds)
-        await asyncio.sleep(max(0, (when - now + delay).total_seconds()))
-        logger.info("%s：开始执行", task_name)
-        return await action(libic)
-
-
-async def _run_at_calibrated(
-    coordinator: Coordinator,
-    when: datetime,
-    action: AsyncAction,
-    task_name: str,
-    prepare_action: PreparationAction | None,
-) -> Any:
-    """Wait for preparation, then calibrate the active session before execution."""
+    """Wait using a calibrated monotonic deadline."""
     prepare = when - timedelta(minutes=coordinator.config.libic.prepare_minutes)
     async with session(coordinator) as libic:
         now = await libic.get_server_time()
@@ -204,28 +178,13 @@ async def _run_at_calibrated(
         if prepare_action is not None:
             await prepare_action(libic)
 
-        await _sleep_until(calibration.deadline(when))
+        await _sleep_until(
+            calibration.deadline(
+                when, margin_seconds=coordinator.config.libic.overshoot_seconds
+            )
+        )
         logger.info("%s：开始执行", task_name)
         return await action(libic)
-
-
-async def run_at(
-    coordinator: Coordinator,
-    when: datetime,
-    action: AsyncAction,
-    task_name: str = "定时任务",
-    *,
-    calibrate_at_prepare: bool = False,
-    prepare_action: PreparationAction | None = None,
-) -> Any:
-    """Wait using server time or a calibrated monotonic deadline."""
-    if calibrate_at_prepare:
-        return await _run_at_calibrated(
-            coordinator, when, action, task_name, prepare_action
-        )
-    return await _run_at_server_time(
-        coordinator, when, action, task_name, prepare_action=prepare_action
-    )
 
 
 def _reschedule_plan(
@@ -657,7 +616,6 @@ async def daily_task(
             send_at,
             reserve,
             task_name=f"每日预约 {day}",
-            calibrate_at_prepare=True,
             prepare_action=prepare,
         )
     except asyncio.CancelledError:
@@ -719,17 +677,31 @@ async def auto(
         await coordinator.stop()
 
 
-async def schedule_reservation(
+async def schedule(
     service: LibicService,
     section_name: str | None = Argument(None, help="区域名称"),
     seat_name: str | None = Argument(None, help="座位名称"),
-    date: datetime = Option(..., formats=["%m-%d"], help="预约日期 MM-DD"),
-    start: datetime = Option(
-        ..., "--from", "-f", formats=["%H:%M"], help="开始时间 HH:MM"
+    date: datetime | None = Option(
+        None,
+        formats=["%m-%d"],
+        help="预约日期 MM-DD",
     ),
-    end: datetime = Option(..., "--to", "-t", formats=["%H:%M"], help="结束时间 HH:MM"),
-    send_time: datetime = Option(
-        ...,
+    start: datetime | None = Option(
+        None,
+        "--from",
+        "-f",
+        formats=["%H:%M"],
+        help="开始时间 HH:MM",
+    ),
+    end: datetime | None = Option(
+        None,
+        "--to",
+        "-t",
+        formats=["%H:%M"],
+        help="结束时间 HH:MM",
+    ),
+    send_time: datetime | None = Option(
+        None,
         "--at",
         formats=["%m/%d/%H:%M:%S", "%m/%d/%H:%M", "%m-%d/%H:%M"],
         help="发送时间 MM/DD/HH:MM[:SS]",
@@ -738,8 +710,52 @@ async def schedule_reservation(
 ):
     """定时发送座位预约请求。"""
     now = await service.get_server_time()
-    send = send_time.replace(year=now.year)
-    reserve_date = date.replace(year=now.year).date()
+    config = service.config.libic
+    reserve_date = (
+        date.replace(year=now.year).date()
+        if date
+        else now.date() + timedelta(days=config.advance_days)
+    )
+    send = (
+        send_time.replace(year=now.year)
+        if send_time
+        else datetime.combine(now.date(), config.send_time)
+    )
+
+    needs_weekly = (
+        (not seat_id and (section_name is None or seat_name is None))
+        or start is None
+        or end is None
+    )
+    if needs_weekly:
+        plans = [
+            plan for plan in config.weekly if plan.weekday == reserve_date.isoweekday()
+        ]
+        if len(plans) > 1:
+            matching_plans = [
+                plan
+                for plan in plans
+                if (section_name is None or plan.section == section_name)
+                and (seat_name is None or plan.seat == seat_name)
+            ]
+            if matching_plans:
+                plans = matching_plans
+        if len(plans) != 1:
+            logger.error(
+                "目标日期 %s 在配置中匹配到 %d 条周计划；请提供完整参数或确保存在唯一匹配项",
+                reserve_date,
+                len(plans),
+            )
+            raise Exit(2)
+        plan = plans[0]
+        section_name = section_name or plan.section
+        seat_name = seat_name or plan.seat
+        start = start or datetime.combine(reserve_date, plan.start)
+        end = end or datetime.combine(reserve_date, plan.end)
+
+    if start is None or end is None:
+        logger.error("请提供 --from/--to，或在配置中添加目标日期对应的周计划")
+        raise Exit(2)
     if send <= now or reserve_date < now.date() or end.time() <= start.time():
         logger.error("日期或时段无效：发送时间已过，或结束时间早于开始时间")
         raise Exit(2)
@@ -748,7 +764,13 @@ async def schedule_reservation(
         raise Exit(2)
 
     dev_id, section_id, start_t, end_t, _ = await _validate(
-        service, section_name, seat_name, date, start, end, seat_id
+        service,
+        section_name,
+        seat_name,
+        datetime.combine(reserve_date, datetime.min.time()),
+        start,
+        end,
+        seat_id,
     )
     if await service.get_server_time() >= datetime.combine(reserve_date, start_t):
         raise ServiceError("已错过预约开始时间")
@@ -779,14 +801,15 @@ async def schedule_reservation(
         )
 
     coordinator = Coordinator(service.config, protect_leave=False, protect_start=False)
+    send_at = send + timedelta(seconds=service.config.libic.overshoot_seconds)
     logger.info(
-        "定时预约任务已创建：%s %s，将在 %s 发送，预约 %s %s–%s",
+        "定时预约任务已创建：将于 %s 预约 %s %s 座位，时长 %s %s–%s",
+        f"{send_at:%m-%d %H:%M:%S}.{send_at.microsecond // 10000:02d}",
         section_name or "",
         seat_name or seat_id,
-        send + timedelta(seconds=service.config.libic.overshoot_seconds),
-        reserve_date,
-        start_t,
-        end_t,
+        f"{reserve_date}",
+        f"{start_t:%H:%M:%S}",
+        f"{end_t:%H:%M:%S}",
     )
     await service.aclose()
     try:

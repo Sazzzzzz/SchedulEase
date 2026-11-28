@@ -20,7 +20,7 @@ from libic.cli.reserve import (
     list_reservations,
     reserve_seat,
 )
-from libic.cli.schedule import auto, schedule_reservation, watch
+from libic.cli.schedule import auto, schedule, watch
 from libic.cli.utils import adapter
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ app.command(name="reserve")(adapter(reserve_seat))
 app.command(name="cancel")(adapter(cancel_reservation))
 app.command(name="end")(adapter(end_reservation))
 # --- schedule ---
-app.command(name="schedule")(adapter(schedule_reservation, interactive=False))
+app.command(name="schedule")(adapter(schedule, interactive=False))
 app.command(name="watch")(adapter(watch, interactive=False))
 app.command(name="auto")(adapter(auto, interactive=False))
 
